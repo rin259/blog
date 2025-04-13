@@ -3,10 +3,35 @@
     <title>凛的树屋</title>
     <link href="https://rin259.github.io/publii/feed.xml" rel="self" />
     <link href="https://rin259.github.io/publii" />
-    <updated>1970-01-01T08:00:00+08:00</updated>
+    <updated>2025-04-14T01:27:46+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
     <id>https://rin259.github.io/publii</id>
 
+    <entry>
+        <title>First Post</title>
+        <author>
+            <name>Rin</name>
+        </author>
+        <link href="https://rin259.github.io/publii/first-post.html"/>
+        <id>https://rin259.github.io/publii/first-post.html</id>
+
+        <updated>2025-04-14T01:27:46+08:00</updated>
+            <summary>
+                <![CDATA[
+                    Hello, everyone! Welcome to my blog. This is my very first post, and I'm both excited and a bit nervous to start this new journey. I've always been a person who loves to share thoughts and experiences. In the past, I might have written in&hellip;
+                ]]>
+            </summary>
+        <content type="html">
+            <![CDATA[
+                <div class="paragraph">Hello, everyone! Welcome to my blog. This is my very first post, and I'm both excited and a bit nervous to start this new journey.</div>
+<div class="paragraph">I've always been a person who loves to share thoughts and experiences. In the past, I might have written in a diary or talked with friends, but now I want to reach out to a broader audience. I believe that every person has a unique story to tell, and I'm eager to share mine with you.</div>
+<div class="paragraph">This blog will be a place where I can express myself freely. I plan to write about a variety of topics, such as my daily life, my hobbies, interesting things I come across, and maybe even some deeper thoughts and reflections. I hope that my words can bring you some joy, inspiration, or at least a moment of connection.</div>
+<div class="paragraph">I also look forward to hearing from you. Your comments, suggestions, and feedback will be very important to me. This is a two-way street, and I believe that the interaction between us will make this blog more meaningful and interesting.</div>
+<div class="paragraph">So, here we are, at the beginning of something new. I don't know exactly where this journey will take us, but I'm excited to find out. Thank you for joining me on this adventure. Let's make this blog a wonderful place to share and learn together.</div>
+<div class="paragraph">That's all for my first post. I'll be back soon with more content. Take care and have a great day!</div>
+            ]]>
+        </content>
+    </entry>
 </feed>
