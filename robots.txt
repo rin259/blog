@@ -1,3 +1,3 @@
 User-agent: *
 Disallow:
-Sitemap: https://blog.rin.red/blog/sitemap.xml
+Sitemap: https://blog.rin.red/sitemap.xml
