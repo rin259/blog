@@ -2,16 +2,16 @@
     "version": "https://jsonfeed.org/version/1",
     "title": "凛的树屋",
     "description": "",
-    "home_page_url": "https://rin259.github.io/blog",
-    "feed_url": "https://rin259.github.io/blog/feed.json",
+    "home_page_url": "https://blog.rin.red/blog",
+    "feed_url": "https://blog.rin.red/blog/feed.json",
     "user_comment": "",
     "author": {
         "name": "Rin"
     },
     "items": [
         {
-            "id": "https://rin259.github.io/blog/first-post/",
-            "url": "https://rin259.github.io/blog/first-post/",
+            "id": "https://blog.rin.red/blog/first-post/",
+            "url": "https://blog.rin.red/blog/first-post/",
             "title": "First Post",
             "summary": "Hello, everyone! Welcome to my blog. This is my very first post, and I'm both excited and a bit nervous to start this new journey. Why I’m Starting This Blog I've always been a person who loves to share thoughts and experiences. In the past,&hellip;",
             "content_html": "<div class=\"paragraph\">\n<div class=\"paragraph\">Hello, everyone! Welcome to my blog. This is my very first post, and I'm both excited and a bit nervous to start this new journey.</div>\n<h2 class=\"\">Why I’m Starting This Blog</h2>\n<div class=\"paragraph\">    I've always been a person who loves to share thoughts and experiences. In the past, I might have written in a diary or talked with friends, but now I want to reach out to a broader audience. I believe that every person has a unique story to tell, and I'm eager to share mine with you.</div>\n<h2 class=\"\">What to Expect</h2>\n<div class=\"paragraph\">This blog will be a place where I can express myself freely. I plan to write about a variety of topics, such as:</div>\n<ul>\n<li>\n<div class=\"paragraph\"><strong class=\"\">Daily Life</strong>: Snapshots of my everyday experiences.</div>\n</li>\n<li>\n<div class=\"paragraph\"><strong>Hobbies</strong>: What I’m passionate about and what I’m working on.</div>\n</li>\n<li>\n<div class=\"paragraph\"><strong>Interesting Finds</strong>: Cool things I come across that I think you might enjoy.</div>\n</li>\n<li>\n<div class=\"paragraph\"><strong>Deep Thoughts</strong>: Sometimes, I’ll share reflections and ideas that have been on my mind.</div>\n</li>\n</ul>\n<h2 class=\"\">Let’s Connect</h2>\n<div class=\"paragraph\">    I also look forward to hearing from you. Your comments, suggestions, and feedback will be very important to me. This is a two-way street, and I believe that the interaction between us will make this blog more meaningful and interesting.</div>\n<div class=\"paragraph\">So, here we are, at the beginning of something new. I don't know exactly where this journey will take us, but I'm excited to find out. Thank you for joining me on this adventure. Let's make this blog a wonderful place to share and learn together.</div>\n<div class=\"paragraph\">    That's all for my first post. I'll be back soon with more content. Take care and have a great day!</div>\n</div>",
