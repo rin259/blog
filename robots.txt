@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://rin.github.io/Asterismu/publii/sitemap.xml
