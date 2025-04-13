@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
     <title>凛的树屋</title>
-    <link href="https://rin259.github.io/publii/feed.xml" rel="self" />
-    <link href="https://rin259.github.io/publii" />
+    <link href="https://rin259.github.io/feed.xml" rel="self" />
+    <link href="https://rin259.github.io" />
     <updated>2025-04-14T01:27:46+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
-    <id>https://rin259.github.io/publii</id>
+    <id>https://rin259.github.io</id>
 
     <entry>
         <title>First Post</title>
         <author>
             <name>Rin</name>
         </author>
-        <link href="https://rin259.github.io/publii/first-post/"/>
-        <id>https://rin259.github.io/publii/first-post/</id>
+        <link href="https://rin259.github.io/first-post/"/>
+        <id>https://rin259.github.io/first-post/</id>
 
         <updated>2025-04-14T01:27:46+08:00</updated>
             <summary>
