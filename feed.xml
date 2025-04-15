@@ -3,7 +3,7 @@
     <title>凛的树屋</title>
     <link href="https://blog.rin.red/feed.xml" rel="self" />
     <link href="https://blog.rin.red" />
-    <updated>2025-04-15T15:13:10+08:00</updated>
+    <updated>2025-04-15T15:17:08+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
@@ -53,10 +53,7 @@ fi</code></pre>
 <p>会优先删除我自己放在这里的那些没实现的想法。这算不算某种数字层面的...自我和解？关于没有完善它们之类的</p>
 <p>真是着迷，这种在抽象深渊边缘试探的眩晕感。把SOS编译成JSON，用HTTP状态码形似与意义上的哭泣，在CI/CD流水线里刻下到此一游...</p>
 <p>P. S. 真是抽象的自我介绍lmao bro以为他是意识流写手把self introduction写的似乎有点flow了</p>
-<p>
-<script src="https://utteranc.es/client.js" repo="rin259/blog" issue-term="pathname" theme="photon-dark" crossorigin="anonymous" async="">
-	</script>
-</p>
+<p> </p>
             ]]>
         </content>
     </entry>
