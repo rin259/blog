@@ -3,7 +3,7 @@
     <title>凛的树屋</title>
     <link href="https://blog.rin.red/feed.xml" rel="self" />
     <link href="https://blog.rin.red" />
-    <updated>2025-04-16T00:41:58+08:00</updated>
+    <updated>2025-04-16T00:51:13+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
@@ -69,7 +69,6 @@ def 喵喵请求(url, 数据):
     time.sleep(等待时间)  # 假装是只普通小猫咪
     return requests.post(url, data=数据)
 </code></pre>
-<h2 id="第三章：突破防线（技术增强版）">第三章：突破防线（技术增强版）</h2>
 <h3 id="32-验证码破解全攻略-🐱👤">3.2 验证码破解全攻略 🐱👤</h3>
 <p>（竖起耳朵进入战斗状态）本喵最擅长的就是对付这些烦人的验证码啦！下面是详细技术手册：</p><h4 id="①-传统字符验证码破解术">① 传统字符验证码破解术</h4>
 <pre><code class="language-python">from PIL import Image
