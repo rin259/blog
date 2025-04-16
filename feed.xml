@@ -3,7 +3,7 @@
     <title>凛的树屋</title>
     <link href="https://blog.rin.red/feed.xml" rel="self" />
     <link href="https://blog.rin.red" />
-    <updated>2025-04-16T00:51:13+08:00</updated>
+    <updated>2025-04-16T17:16:24+08:00</updated>
     <author>
         <name>Rin</name>
     </author>
@@ -339,7 +339,7 @@ else:
 # 达尔文看了都要掀棺材板喵！
 </code></pre>
 <h2 id="3-手动撸猫指南（干预进化）">3. 手动撸猫指南（干预进化）</h2>
-<p>当自动进化不靠谱时，就该两脚兽出手啦！</p><h3 id="31-人工配种">3.1 人工配种**</h3>
+<p>当自动进化不靠谱时，就该两脚兽出手啦！</p><h3 id="31-人工配种">3.1 人工配种</h3>
 <p>往基因池里塞点优质血统：</p><pre><code class="language-python">kittens.append(&quot;math.sin(x)&quot;)  # 加入学霸猫基因
 kittens.append(&quot;x**3&quot;)         # 加入网红猫基因
 </code></pre>
