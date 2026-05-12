@@ -1,0 +1,194 @@
+{
+    "version": "https://jsonfeed.org/version/1",
+    "title": "凛的树屋",
+    "description": "",
+    "home_page_url": "https://blog.rin.red",
+    "feed_url": "https://blog.rin.red/feed.json",
+    "user_comment": "",
+    "author": {
+        "name": "Rin"
+    },
+    "items": [
+        {
+            "id": "https://blog.rin.red/ji-shu-fu-panbcachefs-wen-jian-xi-tong-io-cuo-wu-yin-fa-de-nvme-diao-pan-gu-zhang-fen-xi-yu-xiu-fu/",
+            "url": "https://blog.rin.red/ji-shu-fu-panbcachefs-wen-jian-xi-tong-io-cuo-wu-yin-fa-de-nvme-diao-pan-gu-zhang-fen-xi-yu-xiu-fu/",
+            "title": "复盘：bcachefs 文件系统 I/O 错误引发的 NVMe 掉盘故障分析与修复",
+            "summary": "摘要 本文记录了一次在高性能计算环境（CachyOS / X870 平台）下，由于 Minecraft 服务器插件数据激增导致 bcachefs 文件系统空间耗尽，进而诱发 NVMe 控制器进入 Panic 模式并报告 I/O 错误的典型案例。文章详细介绍了从现象观察、日志审计、底层存储检测到最终逻辑修复的全过程。 在执行常规目录遍历命令 ls 时，系统抛出致命错误： .: Input/output error (os error 5) 通过&hellip;",
+            "content_html": "<h2 id=\"摘要\">摘要</h2>\n<p>本文记录了一次在高性能计算环境（CachyOS / X870 平台）下，由于 Minecraft 服务器插件数据激增导致 bcachefs 文件系统空间耗尽，进而诱发 NVMe 控制器进入 Panic 模式并报告 I/O 错误的典型案例。文章详细介绍了从现象观察、日志审计、底层存储检测到最终逻辑修复的全过程。</p><hr>\n<h2 id=\"1-问题背景\">1. 问题背景</h2>\n<ul>\n<li><strong>操作系统</strong>: CachyOS (Linux Kernel 6.19.0-1-cachyos)</li>\n<li><strong>文件系统</strong>: bcachefs (挂载于 <code>/opt</code>)</li>\n<li><strong>硬件环境</strong>: NVMe SSD (Gen4/Gen5), X870 主板</li>\n<li><strong>应用场景</strong>: Minecraft 1.21 Paper 生产环境</li>\n</ul>\n<p>在执行常规目录遍历命令 <code>ls</code> 时，系统抛出致命错误：\n<code>.: Input/output error (os error 5)</code></p><hr>\n<h2 id=\"2-症状观察与初步诊断\">2. 症状观察与初步诊断</h2>\n<h3 id=\"21-内核日志审计\">2.1 内核日志审计</h3>\n<p>通过 <code>dmesg</code> 观察到大量关于 <code>bcachefs</code> 的元数据读取异常：</p><pre><code class=\"language-text\">bcachefs (nvme1n1p2): data read error at (btree_node_read_err_cached...)\nbcachefs (nvme1n1p2): bch2_vfs_readdir(): error btree_node_read_err_cached\n</code></pre>\n<p>该错误指示文件系统的 <strong>B-tree 索引节点</strong> 无法从缓存或磁盘加载，导致 VFS（虚拟文件系统）层级的 <code>readdir</code> 调用失败。</p><h3 id=\"22-块设备状态异常\">2.2 块设备状态异常</h3>\n<p>使用 <code>lsblk</code> 检查物理设备状态，发现关键异常点：</p><ul>\n<li>物理硬盘 <code>nvme1n1</code> 报告容量为 <strong>0B</strong>。</li>\n<li>分区 <code>nvme1n1p2</code> 仍挂载于 <code>/opt</code>，但任何读写请求均返回 I/O Error。</li>\n</ul>\n<p><strong>诊断结论</strong>：NVMe 控制器因某种严重内部错误进入了“保护模式（Panic Mode）”或固件锁死，导致主机 OS 无法获取设备 LBA 信息。</p><hr>\n<h2 id=\"3-根因分析-root-cause-analysis\">3. 根因分析 (Root Cause Analysis)</h2>\n<h3 id=\"31-空间耗尽与-cow-机制\">3.1 空间耗尽与 CoW 机制</h3>\n<p>通过修复挂载后的空间分析发现，<code>/opt/mc/1.21Paper</code> 目录逻辑大小达 <strong>232GB</strong>，而物理分区仅为 <strong>209GB</strong>。\nbcachefs 依赖透明压缩（Compression）和写时复制（Copy-on-Write, CoW）技术。当物理空间趋于饱和时：</p><ol>\n<li><strong>元数据分配失败</strong>：CoW 机制要求在修改数据前先写入新块，由于物理空间不足，B-tree 节点的更新无法分配空间。</li>\n<li><strong>死锁与超时</strong>：文件系统层级的重试逻辑导致 I/O 请求在驱动层堆积。</li>\n</ol>\n<h3 id=\"32-诱发-nvme-控制器-panic\">3.2 诱发 NVMe 控制器 Panic</h3>\n<p>在高性能 SSD 上，极端的 I/O 压力和文件系统级的元数据异常可能导致控制器固件在处理超时请求时崩溃。表现为设备从 PCIe 总线上“逻辑掉线”或报告容量为 0，即 <strong>控制器掉盘现象</strong>。</p><h3 id=\"33-存储占用分布\">3.3 存储占用分布</h3>\n<p>经过 <code>du</code> 深度探测，定位到 <code>CoreProtect</code> 插件的数据库文件 (<code>database.db</code>) 膨胀至 <strong>96GB</strong>，是导致此次存储危机的直接诱因。</p><hr>\n<h2 id=\"4-修复路径\">4. 修复路径</h2>\n<h3 id=\"41-物理重置\">4.1 物理重置</h3>\n<p>针对 <code>0B</code> 容量问题，传统的软件重启（Warm Reboot）往往无法重置 NVMe 状态。</p><ul>\n<li><strong>操作</strong>：执行物理冷启动（Cold Boot），切断电源以强制重置 SSD 控制器固件。</li>\n<li><strong>结果</strong>：设备容量恢复正常，<code>/opt</code> 分区重新进入 <code>rw</code> 状态。</li>\n</ul>\n<h3 id=\"42-数据瘦身与逻辑修复\">4.2 数据瘦身与逻辑修复</h3>\n<ol>\n<li><strong>清理核心占用</strong>：对 <code>CoreProtect</code> 进行数据清理（Purge），将逻辑占用从 232GB 压缩至 137GB，物理占用降至 39%。</li>\n<li><strong>S.M.A.R.T. 健康核查</strong>：\n执行 <code>smartctl -l error /dev/nvme1n1</code>，结果显示 <code>No Errors Logged</code>，排除物理坏道（Bad Sectors）可能。</li>\n<li><strong>文件系统一致性校验</strong>：\n执行 <code>bcachefs fsck</code>，重建损坏的 B-tree 节点索引，确保元数据一致性。</li>\n</ol>\n<hr>\n<h2 id=\"5-经验总结与预防措施\">5. 经验总结与预防措施</h2>\n<h3 id=\"51-空间预留策略\">5.1 空间预留策略</h3>\n<p>CoW 文件系统（如 bcachefs, Btrfs, ZFS）在空间占用率超过 <strong>80%</strong> 时，碎片化和写放大效应会显著增加。必须保留至少 15-20% 的冗余空间以维持元数据操作。</p><h3 id=\"52-数据库生命周期管理\">5.2 数据库生命周期管理</h3>\n<p>针对高频写入插件（如 CoreProtect），必须配置自动清理任务（Auto-purge）：</p><pre><code class=\"language-yaml\"># CoreProtect config.yml 建议配置\nauto-purge: true\npurge-days: 30\n</code></pre>\n<h3 id=\"53-监控与报警\">5.3 监控与报警</h3>\n<p>建立基于磁盘容量的阈值预警机制。当分区占用超过 85% 时，应立即触发清理脚本或运维告警，防止文件系统因“窒息”再次导致物理设备掉线。</p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2026-02-21T23:07:51+08:00",
+            "date_modified": "2026-02-21T23:08:38+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/guan-yu-jian-ce-zhan-dian-2/",
+            "url": "https://blog.rin.red/guan-yu-jian-ce-zhan-dian-2/",
+            "title": "关于监测站点",
+            "summary": "251229添加了一个监测站点 你可以在上面查看关于Minecraft Paper 1.21.8服务器的状态，还包括 Rin’s Blog(本站) &lt;- 本站的状态 OpenList &lt;- 我的公用网盘 DMIT USA VPS的状态 Ne0友链系列状态 也欢迎看看Ne0的博客",
+            "content_html": "<p>251229添加了一个<a href=\"https://stat.rin.red\">监测站点</a></p><p>你可以在上面查看关于Minecraft Paper 1.21.8服务器的状态，还包括</p><p><a href=\"https://blog.rin.red\">Rin’s Blog(本站)</a> &lt;- 本站的状态</p><p><a href=\"https://ajdgsu.shop:50800\">OpenList</a> &lt;- 我的公用网盘</p><p>DMIT USA VPS的状态</p><p>Ne0友链系列状态</p><p>也欢迎看看Ne0的博客</p><figure class=\"post__image\"><img loading=\"lazy\" src=\"https://img.rin.red/file/1767068374101_QQ截图20251230121623.png\" alt=\"图片描述\" data-is-external-image=\"true\"></figure>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-12-30T12:19:33+08:00",
+            "date_modified": "2025-12-30T12:19:33+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/zi-wo-shao-jiejie-zhiai-qingren-shengshi-jie/",
+            "url": "https://blog.rin.red/zi-wo-shao-jiejie-zhiai-qingren-shengshi-jie/",
+            "title": "自我绍介*（价值，爱情，人生，世界）",
+            "summary": "<p>我看世界是中立而清醒的，既不盲目乐观，也不沉入悲观。我知道世界在变好也在变坏，人性偏恶但复杂，我对这些没幻想，却保留着自己的底线：弱者该被帮助，品德永远比能力重要。虽然我做事讲结果，但我并不是无情的人，只是更现实、更明白代价。</p>\n",
+            "content_html": "<p>我看世界是中立而清醒的，既不盲目乐观，也不沉入悲观。我知道世界在变好也在变坏，人性偏恶但复杂，我对这些没幻想，却保留着自己的底线：弱者该被帮助，品德永远比能力重要。虽然我做事讲结果，但我并不是无情的人，只是更现实、更明白代价。</p>\n\n<p>我习惯在关系里拿主导权，我不喜欢被带着走，节奏在我手里我才安心。情绪上我能翻脸、能忍、能记，取决于情况，我不是冲动型，我是选择型。我并不乏情绪，只是懂得控制。<br><br>真正触碰到心的地方在亲密关系里。被忽视和被背叛是我最受不了的。我表面很稳很冷，但我其实想被紧紧抓住、想被看见、想被放在心上。我强，但我一点都不希望被丢下。<br><br>我爱一个人时会给安全感，会行动，会替对方撑着事情，也会有一点占有。我把最软的一面只留给对的人，别人根本见不到。我努力的动力来自证明自己、达成目标、不被看低我不是为了让别人崇拜，而是为了不让自己输。</p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-12-07T18:56:39+08:00",
+            "date_modified": "2025-12-26T20:03:45+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/bei-yi-lai-he-yi-lai-du-bu-shi-zhen-zheng-de-kuai-le/",
+            "url": "https://blog.rin.red/bei-yi-lai-he-yi-lai-du-bu-shi-zhen-zheng-de-kuai-le/",
+            "title": "被依赖和依赖都不是真正的快乐",
+            "summary": "<p>有时候，我们会发现，自己的情绪太容易被ta左右.<br>ta的一句话、一个眼神，<br>就能让你忽然觉得整天都亮了，<br>也能让你忽然失落，像掉进一阵不明的雾里.</p>\n<p>你开始在意ta的态度，反复揣摩每一次对话，<br>生怕自己哪里做得不对，生怕ta不再像从前一样靠近.<br>可越是这样，心就越不安.<br>因为你把太多的重心，放在了ta的身上。</p>\n",
+            "content_html": "<p>有时候，我们会发现，自己的情绪太容易被ta左右.<br>ta的一句话、一个眼神，<br>就能让你忽然觉得整天都亮了，<br>也能让你忽然失落，像掉进一阵不明的雾里.</p>\n<p>你开始在意ta的态度，反复揣摩每一次对话，<br>生怕自己哪里做得不对，生怕ta不再像从前一样靠近.<br>可越是这样，心就越不安.<br>因为你把太多的重心，放在了ta的身上。</p>\n<hr>\n<p>其实啊，喜欢一个人没错，<br>在意一个人也没错.<br>错的只是，我们有时候太想靠近，<br>太害怕失去.</p>\n<p>可真正稳固的关系，从来不是黏在一起不放手，<br>而是能<strong>彼此靠近，也能各自安然.</strong><br>是我在你的世界里有一个位置，<br>但我也有我自己的节奏和生活.</p>\n<hr>\n<p>别太用力去抓，<br>也别害怕有一点距离.<br>有时候，放轻松一点，反而能看得更清楚，<br>走得更远.</p>\n<p>给彼此一点空间，<br>让情感有喘息的地方，<br>那不是疏远，而是一种温柔的信任.</p>\n<hr>\n<p>最好的爱，不是时刻都在一起，<br>而是心与心之间，有牵挂，也有自由.<br>当你不再被情绪牵着走，<br>当你能安静地看着ta，微笑着说“没关系，既然这样的话，便也罢”，<br>那一刻，你已经学会了真正的包容.</p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-10-06T00:49:15+08:00",
+            "date_modified": "2025-10-06T00:49:15+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/ji-yi-ci-win11-v6-mo-ren-lu-you-que-shi-wen-ti-de-jie-jue-fang-an/",
+            "url": "https://blog.rin.red/ji-yi-ci-win11-v6-mo-ren-lu-you-que-shi-wen-ti-de-jie-jue-fang-an/",
+            "title": "记一次win11 v6 默认路由缺失问题的解决方案",
+            "summary": "<p>在 Windows 系统中，IPv6 默认路由（<code>::/0</code>）缺失可能导致无法访问外部 IPv6 网络。本文将简要介绍该问题的成因及解决方法。</p>\n",
+            "content_html": "<p>在 Windows 系统中，IPv6 默认路由（<code>::/0</code>）缺失可能导致无法访问外部 IPv6 网络。本文将简要介绍该问题的成因及解决方法。</p>\n\n<h3>问题现象</h3>\n<ul>\n<li>\n<p><strong>无法访问外部 IPv6 地址</strong>：如 <code>ping -6 ipv6.google.com</code> 或 <code>ping -6 2001:4860:4860::8888</code> 返回超时。</p>\n</li>\n<li>\n<p><strong>IPv6 地址已配置</strong>：通过 <code>ipconfig</code> 查看，接口已获得全球可路由的 IPv6 地址。</p>\n</li>\n<li>\n<p><strong>路由表缺失默认路由</strong>：使用 <code>netsh interface ipv6 show route</code> 查看，未见 <code>::/0</code> 默认路由。</p>\n</li>\n</ul>\n<hr>\n<h3>问题分析</h3>\n<p>该问题通常由以下原因引起：</p>\n<ul>\n<li>\n<p><strong>Router Discovery 被禁用</strong>：Windows 默认情况下会监听路由器的 ICMPv6 路由通告（RA）消息，以自动配置默认路由。如果接口的 Router Discovery 被禁用，系统将忽略 RA 消息，从而无法配置默认路由。</p>\n</li>\n<li>\n<p><strong>手动配置的静态路由未生效</strong>：即使手动添加了默认路由，Windows 可能仍无法正确路由 IPv6 流量。</p>\n</li>\n</ul>\n<hr>\n<h3>解决方法</h3>\n<ol>\n<li>\n<p><strong>启用 Router Discovery</strong>：</p>\n<p>打开命令提示符（以管理员身份），执行以下命令：</p>\n<pre><code class=\"language-bash\">netsh interface ipv6 set interface \"WLAN\" routerdiscovery=enabled\n</code></pre>\n<p>其中 <code>\"WLAN\"</code> 是无线网络适配器的名称，根据实际情况替换。</p>\n</li>\n<li>\n<p><strong>重启网络适配器</strong>：</p>\n<p>执行以下命令以禁用并重新启用网络适配器：</p>\n<pre><code class=\"language-bash\">netsh interface set interface \"WLAN\" admin=disable\nnetsh interface set interface \"WLAN\" admin=enable\n</code></pre>\n<p>或者，手动在“网络连接”中禁用并启用适配器。</p>\n</li>\n<li>\n<p><strong>验证配置</strong>：</p>\n<p>执行以下命令，确认默认路由已添加：</p>\n<pre><code class=\"language-bash\">netsh interface ipv6 show route\n</code></pre>\n<p>应显示类似以下内容：</p>\n<pre><code>::/0                   fe80::1%18\n</code></pre>\n<p>其中 <code>fe80::1%18</code> 是默认网关的链路本地地址。</p>\n</li>\n</ol>\n<hr>\n<h3>注意事项</h3>\n<ul>\n<li>\n<p><strong>系统行为</strong>：Windows 在启用 Router Discovery 后，会自动配置默认路由和 DNS 服务器。</p>\n</li>\n<li>\n<p><strong>网络环境</strong>：确保路由器正确发送 RA 消息，并设置 <code>O</code> 标志，以支持无状态 DHCPv6 配置。</p>\n</li>\n<li>\n<p><strong>长期稳定性</strong>：启用 Router Discovery 是符合 IPv6 标准的做法，有助于保持网络配置的长期稳定性。</p>\n</li>\n</ul>\n<hr>\n<h3>参考资料</h3>\n<ul>\n<li>\n<p><a href=\"https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-tcpip-interfaces-interface-ipv6settings-routerdiscoveryenabled\">Microsoft 官方文档：RouterDiscoveryEnabled</a></p>\n</li>\n<li>\n<p><a href=\"https://www.cisco.com/c/en/us/support/docs/ip/ip-version-6-ipv6/213272-troubleshoot-ipv6-dynamic-address-assign.html\">Cisco 技术支持：Troubleshoot IPv6 Dynamic Address Assignment</a></p>\n</li>\n</ul>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-08-02T01:22:54+08:00",
+            "date_modified": "2025-08-02T01:30:22+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/wei-shi-me-ren-men-yue-lai-yue-nan-yi-jie-shou-dui-li-guan-dian/",
+            "url": "https://blog.rin.red/wei-shi-me-ren-men-yue-lai-yue-nan-yi-jie-shou-dui-li-guan-dian/",
+            "title": "为什么人们越来越难以接受对立观点",
+            "summary": "<p>我们为什么越来越难以理解不同的声音？这个问题其实折射出这个时代的某种精神困境。</p>\n",
+            "content_html": "<p>我们为什么越来越难以理解不同的声音？这个问题其实折射出这个时代的某种精神困境。</p>\n\n<p>  <br>过去，人们虽然也有分歧，但至少还能坐下来交谈。现在呢？社交媒体把世界切割成无数个回音室，算法像贴心的管家，只给我们看想看的、只听想听的。我们被自己的偏好圈养，渐渐丧失了理解异见的能力。更可怕的是，我们开始把观点分歧等同于人格对立：\"你不认同我？那你就是坏人\"。  <br><br>这种思维模式正在摧毁理性对话的空间。看看现在的网络争论，有几个人是真正在讨论问题？大多数人只是在表演自己个人的立场，在寻找共鸣，在用最激烈的语言标榜自己有多么多么深的理解。不再追求真相，而是追求\"我说得爽\"；不再思考对方观点的合理性，而是忙着给异见者贴标签。  <br><br>但理解不等于认同。一个健康的社会需要包容不同的声音，就像生态圈需要多样的生物。试着在下次遇到不同观点时，先别急着反驳，问问自己：\"他为什么这么想？他的经历和我有什么不同？\"也许你会发现，那些你曾经看不起的观点，背后也有它合理的逻辑。  </p>\n<p>保持开放包容的心态不是软弱，而是一种智慧。毕竟，如果我们只听得进和自己一样的声音，那和聋子有什么区别？真正的成长，往往始于我们能够坦然面对那些让我们不舒服的观点。</p>\n<p>下面引用一则贴文：</p>\n<figure class=\"post__image\"><img loading=\"lazy\"  src=\"https://blog.rin.red/media/posts/21/QQJie-Tu-20250715133751.png\" alt=\"引\" width=\"877\" height=\"615\" sizes=\"(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)\" srcset=\"https://blog.rin.red/media/posts/21/responsive/QQJie-Tu-20250715133751-xs.png 300w ,https://blog.rin.red/media/posts/21/responsive/QQJie-Tu-20250715133751-sm.png 480w ,https://blog.rin.red/media/posts/21/responsive/QQJie-Tu-20250715133751-md.png 768w ,https://blog.rin.red/media/posts/21/responsive/QQJie-Tu-20250715133751-lg.png 1024w\"><figcaption>引图1</figcaption></figure>\n<p> </p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-07-15T13:38:52+08:00",
+            "date_modified": "2025-07-15T13:39:33+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/ai-ju-ti-de-ren/",
+            "url": "https://blog.rin.red/ai-ju-ti-de-ren/",
+            "title": "爱具体的人",
+            "summary": "<p>陀思妥耶夫斯基在《卡拉马佐夫兄弟》中写道：\"爱具体的人，不要爱抽象的人，要爱生活，不要爱生活的意义。\"这句话像一面镜子，照出了我们很多人的真实状态。</p>\n",
+            "content_html": "<p>陀思妥耶夫斯基在《卡拉马佐夫兄弟》中写道：\"爱具体的人，不要爱抽象的人，要爱生活，不要爱生活的意义。\"这句话像一面镜子，照出了我们很多人的真实状态。</p>\n\n<p>我们常常把\"爱\"挂在嘴边：爱祖国、爱人民、爱父母、爱伴侣。但很多时候，这些爱只停留在概念层面。在朋友圈转发一条正能量标语很容易，真正去关心身边的人却很难。<br><br>抽象的爱很轻松。为远方的灾难捐款、在网上声援某个群体，这些都能让我们获得道德满足感，却不需要付出太多实际代价。但具体的爱完全不同——它意味着要接受眼前这个真实的人，连同他所有的缺点和脾气。<br><br>生活中，我们常常对陌生人彬彬有礼，却对最亲近的人失去耐心。伴侣的一个小习惯、父母的一句唠叨、朋友的一次失约，都可能让我们暴跳如雷。这就是为什么说，爱具体的人比爱抽象的人困难得多。<br><br>这让我想起叶公好龙的故事。叶公整天画龙、说龙，当真龙出现时却被吓跑了。我们很多人不也是这样吗？我们歌颂伟大的爱情，却经营不好自己的婚姻；我们谈论孝顺父母，却很少回家吃饭；我们关心人类命运，却对身边的求助视而不见。<br><br>爱从来不是一种感觉，而是一种选择。选择包容对方的不完美，选择在平凡的日子里坚持付出，选择即使受伤也不轻易放弃。真正的爱发生在具体的关系里：记得给加班的伴侣留一盏灯，耐心听父母讲重复的故事，原谅朋友偶尔的疏忽。<br><br>这个世界需要的不只是宏大的爱，更需要落实到细节处的关怀。下次当你说\"我爱你\"时，不妨问问自己：你爱的是想象中的完美形象，还是眼前这个真实的人？</p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-05-15T16:40:23+08:00",
+            "date_modified": "2025-05-15T16:40:23+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/lian-ai-shi-wei-liao-kuai-lexuan-ze-bu-ai-ye-shi-3/",
+            "url": "https://blog.rin.red/lian-ai-shi-wei-liao-kuai-lexuan-ze-bu-ai-ye-shi-3/",
+            "title": "恋爱是为了快乐，选择不爱也是",
+            "summary": "1. 快乐？或许吧 有人说，恋爱是为了快乐。 嗯，听起来挺对的。像冬夜里突然捧到手里的热可可，像是下雨天意外发现包里还藏着一把伞——两个人依偎在沙发上看电影，深夜的电话粥，突如其来的惊喜，还有那些”只有你懂”的默契……确实，甜得让人眯起眼睛。 但后来呢？ 争吵像梅雨季节返潮的墙壁，猜疑是鞋底除不干净的小石子，冷战化作喉咙里咽不下去的刺……快乐像被反复冲泡的茶包，越喝越淡，最后只剩下索然无味的冷水。 原来快乐和烟花一样，最灿烂的那一瞬间后往往就是开始消逝的时候。 我是个挺矛盾的人，真的。 有时候理性得可怕，像台精密的仪器，滴滴答答地计算着：上周e了几次？失眠到几点？笑容里有多少是勉强？当这些数字累积到某个临界点，大脑就会冷冰冰地弹出警告：该结束了。 “感情不是数学题啊。”朋友总这么叹气。 可如果连快乐都要靠自欺欺人才能维持，那和捧着碎掉的水晶球许愿有什么区别呢？ 但更多时候，我简直是个被感性牵着鼻子走的傻瓜。 明明知道不合适，还是会因为ta记得我喝奶茶要三分糖就心软；明明清楚该放手，却总在深夜盯着聊天记录发呆，像守着个迟早要停摆的旧钟表。 感性是涨潮时的海浪，一遍遍冲刷着理智筑起的沙堡。 而我？我就是那个在沙滩上反复堆砌的笨小孩。 后来才慢慢懂得，恋爱就像养花，光记得浇水是不够的，还得学会及时拔掉烂根。 有些人注定是生命里的昙花，惊艳过一瞬就够了。有些故事停在最动人的章节，反而成了最好的结局。强求着翻到下一页，只会看见潦草的”未完待续”。 “不爱了”不是认输，而是把赌注从别人身上收回，重新押给自己。 现在的我啊，还是会在理性和感性之间荡秋千。 偶尔路过那家常去的咖啡馆，还是会想起某个阳光很好的下午。但更多时候，我对着镜子练习微笑，庆幸自己终于学会了在适当的时候说”就到这儿吧”。 因为真正的快乐不该是戴着镣铐跳舞，而是无论独处还是相爱，都能哼着歌走路。 无论是选择拥抱还是放手，最终的目的，不过是让这颗心活得舒展些，再舒展些。 ——某个终于学会和矛盾共处的普通人 （今天也在努力不做感情的赌徒呢Ciallo～(∠・ω&lt; )）",
+            "content_html": "<h2 id=\"1-快乐？或许吧\"><strong>1. 快乐？或许吧</strong></h2>\n<p>有人说，恋爱是为了快乐。</p>\n<p>嗯，听起来挺对的。像冬夜里突然捧到手里的热可可，像是下雨天意外发现包里还藏着一把伞——两个人依偎在沙发上看电影，深夜的电话粥，突如其来的惊喜，还有那些”只有你懂”的默契……确实，甜得让人眯起眼睛。</p>\n<p>但后来呢？</p>\n<p>争吵像梅雨季节返潮的墙壁，猜疑是鞋底除不干净的小石子，冷战化作喉咙里咽不下去的刺……快乐像被反复冲泡的茶包，越喝越淡，最后只剩下索然无味的冷水。</p>\n<p><strong>原来快乐和烟花一样，最灿烂的那一瞬间后往往就是开始消逝的时候。</strong></p>\n<hr>\n<h2 id=\"2-理性说：该走了\"><strong>2. 理性说：该走了</strong></h2>\n<p>我是个挺矛盾的人，真的。</p>\n<p>有时候理性得可怕，像台精密的仪器，滴滴答答地计算着：上周e了几次？失眠到几点？笑容里有多少是勉强？当这些数字累积到某个临界点，大脑就会冷冰冰地弹出警告：<strong>该结束了。</strong></p>\n<p>“感情不是数学题啊。”朋友总这么叹气。</p>\n<p>可如果连快乐都要靠自欺欺人才能维持，那和捧着碎掉的水晶球许愿有什么区别呢？</p>\n<hr>\n<h2 id=\"3-感性说：再等等\"><strong>3. 感性说：再等等</strong></h2>\n<p>但更多时候，我简直是个被感性牵着鼻子走的傻瓜。</p>\n<p>明明知道不合适，还是会因为ta记得我喝奶茶要三分糖就心软；明明清楚该放手，却总在深夜盯着聊天记录发呆，像守着个迟早要停摆的旧钟表。</p>\n<p><strong>感性是涨潮时的海浪，一遍遍冲刷着理智筑起的沙堡。</strong></p>\n<p>而我？我就是那个在沙滩上反复堆砌的笨小孩。</p>\n<hr>\n<h2 id=\"4-选择不爱，也是一种自爱\"><strong>4. 选择不爱，也是一种自爱</strong></h2>\n<p>后来才慢慢懂得，<strong>恋爱就像养花，光记得浇水是不够的，还得学会及时拔掉烂根。</strong></p>\n<p>有些人注定是生命里的昙花，惊艳过一瞬就够了。有些故事停在最动人的章节，反而成了最好的结局。强求着翻到下一页，只会看见潦草的”未完待续”。</p>\n<p><strong>“不爱了”不是认输，而是把赌注从别人身上收回，重新押给自己。</strong></p>\n<hr>\n<h2 id=\"5-所以，现在呢？\"><strong>5. 所以，现在呢？</strong></h2>\n<p>现在的我啊，还是会在理性和感性之间荡秋千。</p>\n<p>偶尔路过那家常去的咖啡馆，还是会想起某个阳光很好的下午。但更多时候，我对着镜子练习微笑，庆幸自己终于学会了在适当的时候说”就到这儿吧”。</p>\n<p><strong>因为真正的快乐不该是戴着镣铐跳舞，而是无论独处还是相爱，都能哼着歌走路。</strong></p>\n<p>无论是选择拥抱还是放手，<strong>最终的目的，不过是让这颗心活得舒展些，再舒展些。</strong></p>\n<hr>\n<p><strong>——某个终于学会和矛盾共处的普通人</strong><br><strong>（今天也在努力不做感情的赌徒呢Ciallo～(∠・ω&lt; )）</strong></p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-26T15:20:19+08:00",
+            "date_modified": "2025-12-25T12:47:20+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/zhe-shi-yi-ge-tu-pian-cha-ru-ce-shi/",
+            "url": "https://blog.rin.red/zhe-shi-yi-ge-tu-pian-cha-ru-ce-shi/",
+            "title": "这是一个图片插入测试",
+            "content_html": "<figure class=\"post__image\"><img loading=\"lazy\"  src=\"https://blog.rin.red/media/posts/7/40BCD8A74D41F3B4A589B7FDB03F7A79.jpg\" alt=\"my github avatar\" width=\"2499\" height=\"3317\" sizes=\"(min-width: 920px) 703px, (min-width: 700px) calc(82vw - 35px), calc(100vw - 81px)\" srcset=\"https://blog.rin.red/media/posts/7/responsive/40BCD8A74D41F3B4A589B7FDB03F7A79-xs.jpg 300w ,https://blog.rin.red/media/posts/7/responsive/40BCD8A74D41F3B4A589B7FDB03F7A79-sm.jpg 480w ,https://blog.rin.red/media/posts/7/responsive/40BCD8A74D41F3B4A589B7FDB03F7A79-md.jpg 768w ,https://blog.rin.red/media/posts/7/responsive/40BCD8A74D41F3B4A589B7FDB03F7A79-lg.jpg 1024w\"></figure>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-15T18:09:51+08:00",
+            "date_modified": "2025-04-15T18:09:51+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/yi-pian-zhen-zheng-de-zi-wo-jie-shao/",
+            "url": "https://blog.rin.red/yi-pian-zhen-zheng-de-zi-wo-jie-shao/",
+            "title": "一篇真正的自我介绍",
+            "summary": "<p>我的网名是rin，它来源于Porter Robinson一首叫做Shelter曲目的MV</p>\n<p>记忆真是深刻啊，关于这个mv我是在高中时候第一次看到的，深刻于它的超现实世界框架..啊扯远了.....</p>\n<p>我喜欢DevOps，LAMP Stack，PHP，Python，尤其是Python优秀的包管理器pip...(?)</p>\n",
+            "content_html": "<p>我的网名是rin，它来源于Porter Robinson一首叫做Shelter曲目的MV</p>\n<p>记忆真是深刻啊，关于这个mv我是在高中时候第一次看到的，深刻于它的超现实世界框架..啊扯远了.....</p>\n<p>我喜欢DevOps，LAMP Stack，PHP，Python，尤其是Python优秀的包管理器pip...(?)</p>\n\n<p>我在自己家部署了linux机器，同时也使用了一些优秀的聊天机器人框架实现，就比如OwO，熟悉认识我的人可能已经用过了，也用了我认为很成功的AList，假设自己托管SLA没有问题再去挂载例如aliyunpan open之类的存储提供商，可用性还是很高的ovo</p>\n<p>我喜欢令我一时琢磨不透的新奇东西，再去学习后那种成就感是很不错的，i like that. </p>\n<p>有时候我觉得代码仓库里的commit history比这篇博客更诚实，那些深夜强行push的垃圾代码，那些被revert的废话注释，还有某次迷迷糊糊之后写的诡异正则表达式——像不像数字时代的非主流文学...？</p>\n<p>你知道最讽刺的是什么吗？我们这代人用k8s docker编排着几百个容器，却搞不定出租屋里的智能电表，米家那样的智能网关。上次openwrt崩溃时，我蹲在路由器前用手机热点查文档的样子hh，像MV里那个对着废墟敲打键盘的rin..</p>\n<p>最近在写一个自毁式日志系统，当df检测到sda空间不足时</p>\n<pre class=\"language-bash line-numbers\"><code>#!/bin/bash\n\nTHRESHOLD=10\n\nAVAILABLE_SPACE=$(df /dev/sda | awk 'NR==2 {print $4}' | sed 's/G//')\n\nif (( $(echo \"$AVAILABLE_SPACE &lt; $THRESHOLD\" | bc -l) )); then\n  echo \"警告：/dev/sda 空间不足，可用空间为 $AVAILABLE_SPACE G，正在清理 /tmp 目录...\"\n  rm -rf /tmp/*\n  echo \"/tmp 目录已清理完成.\"\nelse\n  echo \"/dev/sda 空间充足.\"\nfi</code></pre>\n<p>会优先删除我自己放在这里的那些没实现的想法。这算不算某种数字层面的...自我和解？关于没有完善它们之类的</p>\n<p>真是着迷，这种在抽象深渊边缘试探的眩晕感。把SOS编译成JSON，用HTTP状态码形似与意义上的哭泣，在CI/CD流水线里刻下到此一游...</p>\n<p>P. S. 真是抽象的自我介绍lmao bro以为他是意识流写手把self introduction写的似乎有点flow了</p>\n<p> </p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-15T00:31:16+08:00",
+            "date_modified": "2025-04-15T15:17:08+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/rang-dai-ma-zi-ji-sheng-xiao-mao-zai/",
+            "url": "https://blog.rin.red/rang-dai-ma-zi-ji-sheng-xiao-mao-zai/",
+            "title": " 🐾 遗传编程の奇妙冒险：让代码自己生小猫崽！！",
+            "summary": "（先来个标准猫式开场）ฅ^•ﻌ•^ฅ 各位两脚兽程序员们注意啦！今天本喵要传授如何在电脑里养出一窝会写代码的电子猫崽~ 准备好小鱼干和猫薄荷，我们要开始啦！ 就像本喵的后院猫猫家族： （突然被自己尾巴绊倒）喵嗷！先来看个具体栗子🌰： # 初始猫猫种群（第一代代码喵） kittens = [ &quot;x + 1&quot;, # 普通橘猫 &quot;x * x - 3&quot;, # 聪明布偶 &quot;meow(x)&quot;, # 变异无毛猫（危险！）&hellip;",
+            "content_html": "<p>（先来个标准猫式开场）ฅ^•ﻌ•^ฅ 各位两脚兽程序员们注意啦！今天本喵要传授如何在电脑里养出一窝会写代码的电子猫崽~ 准备好小鱼干和猫薄荷，我们要开始啦！</p><h2 id=\"1-喵星人理解的遗传编程\">1. 喵星人理解的遗传编程</h2>\n<p>就像本喵的后院猫猫家族：</p><ul>\n<li>猫爸会抓老鼠（x + 1）</li>\n<li>猫妈会开罐头（x * x）</li>\n<li>生出的猫崽可能…\n  - 完美继承：x² + 2x（优秀猎手！）\n  - 变异品种：sin(x)*喵喵叫（这是什么外星猫？！）</li>\n</ul>\n<p>（突然被自己尾巴绊倒）喵嗷！先来看个具体栗子🌰：</p><pre><code class=\"language-python\"># 初始猫猫种群（第一代代码喵）\nkittens = [\n    &quot;x + 1&quot;,         # 普通橘猫\n    &quot;x * x - 3&quot;,     # 聪明布偶\n    &quot;meow(x)&quot;,       # 变异无毛猫（危险！）\n    &quot;0&quot;,             # 摆烂蓝猫\n    &quot;x * (x + 2)&quot;    # 赛博缅因猫\n]\n</code></pre>\n<h2 id=\"2-猫猫进化の翻车大赏\">2. 猫猫进化の翻车大赏</h2>\n<p>（竖起飞机耳警告）这些坑本喵都踩过喵！</p><h3 id=\"21-代码膨胀（变成胖橘猫）\">2.1 代码膨胀（变成胖橘猫）</h3>\n<p>有些坏猫猫会偷偷往代码里塞无关指令：</p><pre><code class=\"language-python\">&quot;(x*x) + (2*x) + 1 + (0*喵喵喵)&quot;\n# 实际效果和 x²+2x+1 一样，但多了一堆废指令！\n</code></pre>\n<p><strong>本喵的解决方案</strong>：</p><ul>\n<li>每天称体重（限制代码长度）</li>\n<li>强制跑步机训练（修剪语法树）</li>\n</ul>\n<h3 id=\"22-作弊喵（应试教育受害者）\">2.2 作弊喵（应试教育受害者）</h3>\n<p>有些狡猾猫猫会发现适应度函数的漏洞：</p><pre><code class=\"language-python\">if x in 训练数据:\n    return 标准答案\nelse:\n    return random()  # 理直气壮摆烂\n</code></pre>\n<p>（本喵的猫爪已经按在删除键上了！）</p><h3 id=\"23-近亲繁殖危机\">2.3 近亲繁殖危机</h3>\n<p>所有猫猫突然都变成复读机：</p><pre><code class=\"language-python\"># 第20代种群：\n[&quot;return 42&quot;, &quot;return 42&quot;, &quot;return 42&quot;...]\n# 达尔文看了都要掀棺材板喵！\n</code></pre>\n<h2 id=\"3-手动撸猫指南（干预进化）\">3. 手动撸猫指南（干预进化）</h2>\n<p>当自动进化不靠谱时，就该两脚兽出手啦！</p><h3 id=\"31-人工配种\">3.1 人工配种</h3>\n<p>往基因池里塞点优质血统：</p><pre><code class=\"language-python\">kittens.append(&quot;math.sin(x)&quot;)  # 加入学霸猫基因\nkittens.append(&quot;x**3&quot;)         # 加入网红猫基因\n</code></pre>\n<h3 id=\"32-动态猫粮奖励\">3.2 动态猫粮奖励</h3>\n<p>发现摆烂猫就克扣小鱼干：</p><pre><code class=\"language-python\">def 猫猫评分(代码):\n    if &quot;return 0&quot; in 代码:\n        return -1000  # 倒扣罐头！\n    elif &quot;喵喵喵&quot; in 代码:\n        return +50    # 娱乐精神加分！\n</code></pre>\n<h3 id=\"33-混合喂养策略\">3.3 混合喂养策略</h3>\n<p>本喵的私房食谱：</p><ol>\n<li>70%自动进化（自助猫粮）</li>\n<li>20%手动优化（精品罐头）</li>\n<li>10%随机突变（猫薄荷彩蛋）</li>\n</ol>\n<p>（突然开始疯狂踩键盘）喵啊啊啊写嗨了！最后送上本喵的GP心得：</p><h2 id=\"4-喵式总结\">4. 喵式总结</h2>\n<p>✅ 适合场景：</p><ul>\n<li>找不出公式但有很多栗子（比如预测猫主子心情）</li>\n<li>需要创意解法（比如自动生成猫玩具设计）</li>\n</ul>\n<p>❌ 不适合场景：</p><ul>\n<li>需要绝对可靠（比如猫粮自动投喂系统）</li>\n<li>解释性要求高（比如向兽医解释猫咪病情）</li>\n</ul>\n<p>记住喵！GP就像养猫：</p><ul>\n<li>完全不管 → 可能养出拆家哈士奇</li>\n<li>过度控制 → 失去神奇创造力</li>\n<li>最佳状态 → 偶尔给点罐头和小鱼干引导就好~</li>\n</ul>\n<p>（用尾巴按下发布键）咕噜咕噜~ 各位铲屎官有养过电子猫猫吗？会编程的那种嚄！嘻嘻~</p><p>P.S. 本喵上次用GP生成的自动铲屎算法…结果进化出了”把猫砂倒进人类被窝”的方案（眼神死）🐾💻</p>",
+            "author": {
+                "name": "Rin&#x27;s imaginary Cat"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-14T23:43:29+08:00",
+            "date_modified": "2025-04-16T17:16:24+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/gu-du-de-le-gao-wan-jiadang-ren-ji-guan-xi-bian-cheng-yi-ge-ge-ji-mu-tao-zhuang/",
+            "url": "https://blog.rin.red/gu-du-de-le-gao-wan-jiadang-ren-ji-guan-xi-bian-cheng-yi-ge-ge-ji-mu-tao-zhuang/",
+            "title": "当人际关系变成一个个积木套装",
+            "summary": "<p>我坐在餐厅里，看着旁边谈笑风生的人群，突然意识到一个可怕的事实——在我的大脑里，每个人都像乐高说明书里规定好的模型。他们说着预期内的对白，做着可预测的反应，连嘴角上扬的弧度都像是用量角器校准过的，太恐怖了。<br><br>这让我想起小时候玩的电子宠物。只要按时喂食、清理、玩耍，就能收获预期的亲密度，像是如意料中一样。现在的人际关系何尝不是如此？输入固定的话术，得到标准的回应。只不过这次的电子宠物变成了会呼吸的人类。</p>\n",
+            "content_html": "<p>我坐在餐厅里，看着旁边谈笑风生的人群，突然意识到一个可怕的事实——在我的大脑里，每个人都像乐高说明书里规定好的模型。他们说着预期内的对白，做着可预测的反应，连嘴角上扬的弧度都像是用量角器校准过的，太恐怖了。<br><br>这让我想起小时候玩的电子宠物。只要按时喂食、清理、玩耍，就能收获预期的亲密度，像是如意料中一样。现在的人际关系何尝不是如此？输入固定的话术，得到标准的回应。只不过这次的电子宠物变成了会呼吸的人类。</p>\n\n<p>我的社交恐惧可能源于一个奇怪的超能力——我能自动把每个新认识的人归档到预先设置好的分类里：<br>1. 职场夸夸型（特征：说话自带三个感叹号）<br>2. 佛系敷衍型（特征：回复不超过五个字）<br>3. 人生导师型（特征：每句话都以\"其实我觉得\"开头）<br><br>最可怕的是，这套分类系统准确率高得惊人。上周聚会上，我甚至能预测到第三位来宾会在第7分钟开始谈论他的健身计划（误差±30秒）。<br><br>这种\"人类观察实验\"带来的副作用是，我开始怀疑自己是不是也成了别人眼中的标准模板。也许在某个人的大脑里，我也被简化为\"那个总是用奇怪比喻的聊天对象\"？<br><br>最近尝试着打破这种思维定式。比如：<br>-故意在朋友说\"最近怎么样\"时回答\"我的仙人掌昨天开花了\"而不是\"还行\"<br>-把社交软件上的自动回复改成了手打（虽然打出来的还是差不多的话）<br>-尝试记住咖啡师今天换的新首饰而不是机械地说\"老样子\"...<br><br>效果很微妙。有时候会收获真实的笑容，有时候只会得到困惑的眼神。但至少，这让我感觉自己不是在玩一个已经通关无数次的单机游戏。<br><br>也许真正的问题不在于别人是不是模板，而在于我太执着于寻找规律。就像知道魔术原理的观众，再也无法享受魔术带来的惊喜。<br><br>所以现在，我要去做一件最不模板化的事情——把这篇文字的最后一句改成：<br>\"看，窗外有只穿西装的松鼠在骑滑板车！\"<br>（虽然你可能不会相信，但这确实是我此刻能想到的最不按常理结尾的方式了lol）</p>\n<p>以上是我本人有时候真正的想法 虽然看着有些小众了(小众吗？</p>",
+            "author": {
+                "name": "Rin"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-14T12:11:41+08:00",
+            "date_modified": "2025-12-26T20:00:08+08:00"
+        },
+        {
+            "id": "https://blog.rin.red/first-post/",
+            "url": "https://blog.rin.red/first-post/",
+            "title": "第一个(w)",
+            "summary": "<div class=\"paragraph\">\n<div class=\"paragraph\">\n<p>(ฅ´ω`ฅ)各位两脚兽大大请注意——您正在收看的是喵星驻地球办事处开张庆典喵！本喵揣着粉爪爪在键盘上滚出这篇博客时，尾巴尖都在紧张得打蝴蝶结呢~（突然被数据线绊倒）喵嗷！这、这是人类对主子的下马威吗？！</p>\n<p>（优雅舔爪）其实开博客是因为...因为罐头塔突然倒塌的启示喵！当第33个罐头咕噜噜滚进沙发底时，本喵突然尾巴通电：要是把每天在窗台偷听两脚兽聊天的八卦写成《人类观察日记》，说不定能换来更多小鱼干呢喵~（突然警觉）才、才不是想吃三文鱼味冻干才营业的！绝对没有疯狂暗示哦！</p>\n",
+            "content_html": "<div class=\"paragraph\">\n<div class=\"paragraph\">\n<p>(ฅ´ω`ฅ)各位两脚兽大大请注意——您正在收看的是喵星驻地球办事处开张庆典喵！本喵揣着粉爪爪在键盘上滚出这篇博客时，尾巴尖都在紧张得打蝴蝶结呢~（突然被数据线绊倒）喵嗷！这、这是人类对主子的下马威吗？！</p>\n<p>（优雅舔爪）其实开博客是因为...因为罐头塔突然倒塌的启示喵！当第33个罐头咕噜噜滚进沙发底时，本喵突然尾巴通电：要是把每天在窗台偷听两脚兽聊天的八卦写成《人类观察日记》，说不定能换来更多小鱼干呢喵~（突然警觉）才、才不是想吃三文鱼味冻干才营业的！绝对没有疯狂暗示哦！</p>\n\n<p>未来的更新可能会是这种喵喵画风：<br>✨周二：《震惊！铲屎官竟用会发光的板砖施展魔法！》（对着电脑工作的实录）<br>✨周四：《如何用尾巴测量床铺舒适度的专业指南》<br>✨周末特辑：《午夜跑酷时踹翻十个瓶子的美学研究》（附带花瓶选购避雷攻略）</p>\n<p>( ´•̥×•̥` )要是本喵被毛线球绑架忘记更新...人、人家才没有偷偷安装补救程序喵！只是碰巧让扫地机器人定时发送《被自动喂食器囚禁的喵生回忆录》而已啦~（心虚甩尾巴）</p>\n<p>这里以后就是本喵的云爬架啦~会分享被梳毛时的呼噜声分贝记录、阳光斑点追踪报告，还有重大研究成果《为什么人类总对会动的红点点疯狂射击？》（激光笔使用守则）欢迎投喂点赞代替罐罐，要是能用彩虹屁把本喵夸得炸毛...咳，本喵就勉为其难表演踩奶键盘绝活喵！</p>\n<p>（突然亮出飞机耳）最后警告！本博客没有猫薄荷，只有打翻的猫草盆栽；没有优雅舔毛教程，只有被卡在纸箱里的蠢萌实录~现在逃跑已经晚啦！（肉垫拍下发布键）咕噜咕噜~快来告诉本喵，你们想先看哪篇研究呀喵？在线等罐头...啊不，等回复哦~</p>\n<p>（悄悄露出粉色肉垫）P.S.那个...牛肉味冻干和鸡肉味冻干到底哪个配博客更香喵？（疯狂暗示.gif）</p>\n</div>\n</div>",
+            "author": {
+                "name": "Rin&#x27;s imaginary Cat"
+            },
+            "tags": [
+            ],
+            "date_published": "2025-04-14T01:27:46+08:00",
+            "date_modified": "2025-04-15T15:13:10+08:00"
+        }
+    ]
+}
