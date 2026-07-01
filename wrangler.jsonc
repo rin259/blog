@@ -1,0 +1,9 @@
+{
+	"name": "firefly-blog",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	// Cloudflare Pages: static assets served from dist/
+	"assets": {
+		"directory": "./dist"
+	}
+}
