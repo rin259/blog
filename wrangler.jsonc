@@ -1,9 +1,7 @@
 {
+	// Base config read by @astrojs/cloudflare; the adapter generates the full
+	// deploy config at dist/server/wrangler.json (assets → dist/client) during build.
 	"name": "firefly-blog",
 	"compatibility_date": "2025-01-01",
-	"compatibility_flags": ["nodejs_compat"],
-	// Cloudflare Pages: static assets served from dist/
-	"assets": {
-		"directory": "./dist"
-	}
+	"compatibility_flags": ["nodejs_compat"]
 }

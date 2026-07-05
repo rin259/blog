@@ -33,14 +33,13 @@ jobs:
         env:
           NODE_ENV: production
 
-      # Deploy using the generated wrangler.json in dist/server/
-      # The adapter outputs: dist/server/ (Worker entry) + dist/client/ (static assets)
+      # The adapter writes .wrangler/deploy/config.json (a redirect to dist/server/wrangler.json)
+      # during build, so `wrangler deploy` must run from the project root.
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: dist/server
           command: deploy
         env:
           KEYSTATIC_GITHUB_CLIENT_ID: ${{ secrets.KEYSTATIC_GITHUB_CLIENT_ID }}
