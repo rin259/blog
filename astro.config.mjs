@@ -229,8 +229,10 @@ export default defineConfig({
 			},
 		}),
 		mdx(),
-		// Keystatic (+ its React renderer) only in dev; production is pure static for GitHub Pages.
-		...(isDev ? [react(), keystatic()] : []),
+		// Keystatic + React: always included so Cloudflare Pages generates a _worker.js.
+		// In production, Keystatic uses GitHub OAuth mode; in dev, it uses local storage.
+		react(),
+		keystatic(),
 	],
 	markdown: {
 		processor: unified({
