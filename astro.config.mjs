@@ -48,8 +48,12 @@ if (process.env.NODE_ENV === "development") {
 	setMaxListeners(20);
 }
 
-// GitHub Pages serves pure static output — no adapter.
-// Keystatic admin runs only in `astro dev` (local editing); it is excluded from production builds.
+// Cloudflare Pages adapter for production (supports Keystatic SSR routes).
+// In dev, Astro's built-in server handles SSR without an adapter.
+const adapter = process.env.NODE_ENV === "production"
+	? cloudflare({ prerenderEnvironment: "node" })
+	: undefined;
+
 const isDev = process.env.NODE_ENV !== "production";
 
 // https://astro.build/config
@@ -59,6 +63,8 @@ export default defineConfig({
 	base: "/",
 	// "ignore" (not "always") so Keystatic's /api/keystatic/* calls (no trailing slash) resolve.
 	trailingSlash: "ignore",
+
+	adapter,
 
 
 	// 字体配置 - 只加载实际使用的字体，跳过未引用的以加快构建

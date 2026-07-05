@@ -1,9 +1,17 @@
 import { config, collection, fields } from "@keystatic/core";
 
+// In production (Cloudflare Pages), use GitHub storage so the admin UI works online.
+// In local dev, fall back to local storage (no OAuth needed).
+const storage =
+	process.env.NODE_ENV === "production"
+		? ({
+				kind: "github" as const,
+				repo: "rin259/blog",
+			})
+		: ({ kind: "local" as const });
+
 export default config({
-	// Local mode: content stored as files in git repo.
-	// Admin UI is only usable in local development — production deploys are triggered by git push.
-	storage: { kind: "local" },
+	storage,
 
 	collections: {
 		posts: collection({
