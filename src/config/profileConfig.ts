@@ -12,7 +12,7 @@ export const profileConfig: ProfileConfig = {
 	name: "rin",
 
 	// 个人签名
-	bio: "DevOps / 自托管 / AI Infra。在抽象深渊边缘试探。",
+	bio: "DevOps / 自托管 / AI Infra。",
 
 	// 链接配置
 	// 已经预装的图标集：fa7-brands，fa7-regular，fa7-solid，material-symbols，simple-icons
