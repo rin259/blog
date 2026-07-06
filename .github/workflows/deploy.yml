@@ -32,6 +32,11 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: production
+          # Keystatic reads these via import.meta.env — they MUST be present at build time
+          # (Vite inlines them), not at deploy time.
+          KEYSTATIC_GITHUB_CLIENT_ID: ${{ secrets.KEYSTATIC_GITHUB_CLIENT_ID }}
+          KEYSTATIC_GITHUB_CLIENT_SECRET: ${{ secrets.KEYSTATIC_GITHUB_CLIENT_SECRET }}
+          KEYSTATIC_SECRET: ${{ secrets.KEYSTATIC_SECRET }}
 
       # The adapter writes .wrangler/deploy/config.json (a redirect to dist/server/wrangler.json)
       # during build, so `wrangler deploy` must run from the project root.
@@ -41,6 +46,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-        env:
-          KEYSTATIC_GITHUB_CLIENT_ID: ${{ secrets.KEYSTATIC_GITHUB_CLIENT_ID }}
-          KEYSTATIC_GITHUB_CLIENT_SECRET: ${{ secrets.KEYSTATIC_GITHUB_CLIENT_SECRET }}
+
