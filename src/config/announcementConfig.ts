@@ -5,7 +5,7 @@ export const announcementConfig: AnnouncementConfig = {
 	title: "公告",
 
 	// 公告内容
-	content: "欢迎来到 rin.red。站点已由 Publii 迁移至 Astro + Keystatic，若有链接失效或显示异常欢迎留言。",
+	content: "欢迎来到 rin.red。若有链接失效或显示异常欢迎留言。",
 
 	// 是否允许用户关闭公告
 	closable: true,

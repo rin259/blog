@@ -20,13 +20,12 @@ export const siteConfig: SiteConfig = {
 
 	// 站点关键词
 	keywords: [
-		"Firefly",
-		"Fuwari",
-		"Astro",
-		"ACGN",
-		"博客",
-		"技术博客",
-		"静态博客",
+		"rin",
+		"个人博客",
+		"DevOps",
+		"自托管",
+		"AI Infra",
+		"随笔",
 	],
 
 	// 主题色
@@ -73,12 +72,12 @@ export const siteConfig: SiteConfig = {
 		// 3. 本地图片（src目录，自动优化但会增加构建时间）: { type: "image", value: "assets/images/logo.webp", alt: "Logo" }
 		// 4. 网络图片: { type: "url", value: "https://example.com/logo.png", alt: "Logo" }
 		logo: {
-			type: "image",
-			value: "assets/images/firefly.png",
-			alt: "🍀",
+			type: "url",
+			value: "https://github.com/rin259.png",
+			alt: "rin",
 		},
 		// 导航栏标题
-		title: "Firefly",
+		title: "rin.red",
 		// 全宽导航栏，导航栏是否占满屏幕宽度
 		widthFull: false,
 		// 导航菜单对齐方式，left：左对齐，center：居中
