@@ -45,3 +45,4 @@ package/
 # TinaCMS generated
 tina/__generated__
 .tina/__generated__
+public/admin/
