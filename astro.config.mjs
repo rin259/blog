@@ -14,9 +14,6 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeComponents from "rehype-components"; /* Render the custom directive content */
 import rehypeKatex from "rehype-katex";
 import "katex/dist/contrib/mhchem.mjs"; // 加载 mhchem 扩展
-import cloudflare from "@astrojs/cloudflare";
-import react from "@astrojs/react";
-import keystatic from "@keystatic/astro";
 import mdx from "@astrojs/mdx";
 import { pluginCollapsible } from "expressive-code-collapsible"; /* Collapsible */
 import { pluginLanguageBadge } from "expressive-code-language-badge"; /* Language Badge */
@@ -48,23 +45,14 @@ if (process.env.NODE_ENV === "development") {
 	setMaxListeners(20);
 }
 
-// Cloudflare Pages adapter for production (supports Keystatic SSR routes).
-// In dev, Astro's built-in server handles SSR without an adapter.
-const adapter = process.env.NODE_ENV === "production"
-	? cloudflare({ prerenderEnvironment: "node" })
-	: undefined;
-
-const isDev = process.env.NODE_ENV !== "production";
 
 // https://astro.build/config
 export default defineConfig({
 	site: siteConfig.site_url,
 
 	base: "/",
-	// "ignore" (not "always") so Keystatic's /api/keystatic/* calls (no trailing slash) resolve.
-	trailingSlash: "ignore",
+	trailingSlash: "always",
 
-	adapter,
 
 
 	// 字体配置 - 只加载实际使用的字体，跳过未引用的以加快构建
@@ -229,10 +217,7 @@ export default defineConfig({
 			},
 		}),
 		mdx(),
-		// Keystatic + React: always included so Cloudflare Pages generates a _worker.js.
-		// In production, Keystatic uses GitHub OAuth mode; in dev, it uses local storage.
-		react(),
-		keystatic(),
+
 	],
 	markdown: {
 		processor: unified({

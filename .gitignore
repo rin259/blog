@@ -41,3 +41,7 @@ package/
 
 # Cloudflare local cache (unused)
 .wrangler/
+
+# TinaCMS generated
+tina/__generated__
+.tina/__generated__
