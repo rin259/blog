@@ -21,6 +21,17 @@ export const friendsPageConfig: FriendsPageConfig = {
 };
 
 // 友链配置
+// 留空表示不展示友链卡片，仅渲染 friends.mdx 中的"申请友链"模板内容
+// 添示例：
+//   {
+//     title: "示例站点",
+//     imgurl: "https://example.com/avatar.png",
+//     desc: "示例描述",
+//     siteurl: "https://example.com",
+//     tags: ["技术", "博客"],
+//     weight: 10,
+//     enabled: true,
+//   },
 export const friendsConfig: FriendLink[] = [];
 
 // 获取启用的友链并进行排序

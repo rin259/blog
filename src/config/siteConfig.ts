@@ -6,10 +6,10 @@ const SITE_LANG = "zh_CN";
 
 export const siteConfig: SiteConfig = {
 	// 站点标题
-	title: "rin.red",
+	title: "Asterism's Blog",
 
 	// 站点副标题
-	subtitle: "在抽象深渊边缘试探",
+	subtitle: "",
 
 	// 站点 URL
 	site_url: "https://blog.rin.red",
@@ -19,14 +19,7 @@ export const siteConfig: SiteConfig = {
 		"rin 的个人博客 — DevOps、自托管、AI Infra 与一些抽象的意识流随笔。",
 
 	// 站点关键词
-	keywords: [
-		"rin",
-		"个人博客",
-		"DevOps",
-		"自托管",
-		"AI Infra",
-		"随笔",
-	],
+	keywords: ["rin", "个人博客", "DevOps", "自托管", "AI Infra", "随笔"],
 
 	// 主题色
 	themeColor: {
@@ -98,7 +91,7 @@ export const siteConfig: SiteConfig = {
 	// 页面开关配置 - 控制特定页面的访问权限，设为false会返回404并自动隐藏对应的导航栏菜单项
 	pages: {
 		// 友链页面开关
-		friends: false,
+		friends: true,
 		// 打赏页面开关
 		sponsor: false,
 		// 留言板页面开关，需要配置评论系统
