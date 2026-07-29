@@ -41,7 +41,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	 */
 	src: {
 		// 桌面背景图片（支持单张或多张随机）
-		desktop: "https://img.rin.red/file/Rl071wNd.jpeg",
+		desktop: "https://img.rin.red/file/szlr0gUT.jpg",
 		// 移动背景图片（支持单张或多张随机）
 		mobile: "https://img.rin.red/file/Wqj9pT0o.jpg",
 		// 背景视频播放地址
@@ -65,7 +65,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否允许用户通过控制面板切换横幅标题显示
 			switchable: true,
 			// 主页横幅主标题
-			title: "Asterism's Blog",
+			title: "Rin's Blog",
 			// 主页横幅主标题字体大小
 			titleSize: "3.8rem",
 			// 主页横幅副标题

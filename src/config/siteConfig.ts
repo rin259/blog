@@ -6,7 +6,7 @@ const SITE_LANG = "zh_CN";
 
 export const siteConfig: SiteConfig = {
 	// 站点标题
-	title: "Asterism's Blog",
+	title: "Rin's Blog",
 
 	// 站点副标题
 	subtitle: "",
@@ -70,7 +70,7 @@ export const siteConfig: SiteConfig = {
 			alt: "rin",
 		},
 		// 导航栏标题
-		title: "Asterism's Blog",
+		title: "Rin's Blog",
 		// 全宽导航栏，导航栏是否占满屏幕宽度
 		widthFull: false,
 		// 导航菜单对齐方式，left：左对齐，center：居中
