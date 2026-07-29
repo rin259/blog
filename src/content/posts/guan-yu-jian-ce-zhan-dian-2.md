@@ -23,5 +23,3 @@ DMIT USA VPS的状态
 Ne0友链系列状态
 
 也欢迎看看Ne0的博客
-
-![图片描述](https://img.rin.red/file/1767068374101_QQ%E6%88%AA%E5%9B%BE20251230121623.png)
