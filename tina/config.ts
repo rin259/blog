@@ -90,31 +90,6 @@ export default defineConfig({
 						label: "開啟評論 Comments",
 					},
 					{
-						type: "string",
-						name: "password",
-						label: "訪問密碼 Password（留空則不加密）",
-					},
-					{
-						type: "string",
-						name: "passwordHint",
-						label: "密碼提示 Password Hint",
-					},
-					{
-						type: "string",
-						name: "sourceLink",
-						label: "原文鏈接 Source Link",
-					},
-					{
-						type: "string",
-						name: "licenseName",
-						label: "許可協議名 License Name",
-					},
-					{
-						type: "string",
-						name: "licenseUrl",
-						label: "許可協議 URL License URL",
-					},
-					{
 						type: "rich-text",
 						name: "body",
 						label: "正文 Content",
