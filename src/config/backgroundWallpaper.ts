@@ -41,9 +41,11 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	 */
 	src: {
 		// 桌面背景图片（支持单张或多张随机）
-		desktop: "https://img.rin.red/file/1778201625033_3cc1b36ee694eccf06e4e1eaab71da44.webp",
+		desktop:
+			"https://img.rin.red/file/1778201625033_3cc1b36ee694eccf06e4e1eaab71da44.webp",
 		// 移动背景图片（支持单张或多张随机）
-		mobile: "https://img.rin.red/file/1778201625033_3cc1b36ee694eccf06e4e1eaab71da44.webp",
+		mobile:
+			"https://img.rin.red/file/1778201625033_3cc1b36ee694eccf06e4e1eaab71da44.webp",
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组）
 		// 支持远程视频URL，本地视频请放在 public/assets/videos/ 目录下
@@ -65,13 +67,11 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否允许用户通过控制面板切换横幅标题显示
 			switchable: true,
 			// 主页横幅主标题
-			title: "rin.red",
+			title: "Asterism's Blog",
 			// 主页横幅主标题字体大小
 			titleSize: "3.8rem",
 			// 主页横幅副标题
-			subtitle: [
-				"DevOps / 自托管 / AI Infra",
-			],
+			subtitle: ["DevOps / 自托管 / AI Infra"],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
 			typewriter: {
