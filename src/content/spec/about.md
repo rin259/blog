@@ -15,7 +15,3 @@
 ## 🛠️ 关于本站
 
 本站使用 [Astro](https://astro.build) 构建，主题基于 [Firefly](https://github.com/CuteLeaf/Firefly)（[Fuwari](https://github.com/saicaca/fuwari) 的二次开发），内容通过 [TinaCMS](https://tina.io) 管理，部署于 GitHub Pages。
-
----
-
-*真是抽象的自我介绍 lmao。感谢你的来访！*
