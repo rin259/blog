@@ -66,8 +66,7 @@ export const siteConfig: SiteConfig = {
 		// 4. 网络图片: { type: "url", value: "https://example.com/logo.png", alt: "Logo" }
 		logo: {
 			type: "url",
-			value:
-				"https://www.gravatar.com/avatar/ae9301a8603f44a4d3c321db262aa61f?s=200&d=identicon",
+			value: "/favicon/gravatar-circle.png",
 			alt: "rin",
 		},
 		// 导航栏标题
