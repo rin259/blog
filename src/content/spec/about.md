@@ -1,3 +1,8 @@
+---
+title: "关于我 / About"
+description: "关于我与本站"
+---
+
 # 关于我 / About
 
 我的网名是 **rin**，它来源于 Porter Robinson 一首叫做 Shelter 曲目的 MV。

@@ -25,8 +25,9 @@ const { Content } = await render(guestbookPost);
 const isCommentEnabled = commentConfig?.type && commentConfig.type !== "none";
 
 // 页面标题和描述
-const title = i18n(I18nKey.guestbook);
-const description = i18n(I18nKey.guestbookDescription);
+const title = guestbookPost.data.title || i18n(I18nKey.guestbook);
+const description =
+	guestbookPost.data.description || i18n(I18nKey.guestbookDescription);
 ---
 
 <MainGridLayout title={title} description={description}>
