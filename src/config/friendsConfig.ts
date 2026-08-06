@@ -32,7 +32,16 @@ export const friendsPageConfig: FriendsPageConfig = {
 //     weight: 10,
 //     enabled: true,
 //   },
-export const friendsConfig: FriendLink[] = [];
+export const friendsConfig: FriendLink[] = [
+	{
+		title: "七毛钱的苹果 / 70CentsApple",
+		imgurl: "https://70centsapple.top/icon.ico",
+		desc: "Be gentle; be simple.",
+		siteurl: "https://70centsapple.top/blogs/#/",
+		weight: 0,
+		enabled: true,
+	},
+];
 
 // 获取启用的友链并进行排序
 export const getEnabledFriends = (): FriendLink[] => {
