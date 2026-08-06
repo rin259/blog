@@ -41,6 +41,14 @@ export const friendsConfig: FriendLink[] = [
 		weight: 0,
 		enabled: true,
 	},
+	{
+		title: "Ne0の自由世界",
+		imgurl: "https://0w0.red/images/ava.png",
+		desc: "继续沉醉，自我迂回",
+		siteurl: "https://0w0.red",
+		weight: 0,
+		enabled: true,
+	},
 ];
 
 // 获取启用的友链并进行排序

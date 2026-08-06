@@ -48,7 +48,7 @@ export const siteConfig: SiteConfig = {
 	favicon: [
 		{
 			// 图标文件路径
-			src: "https://www.gravatar.com/avatar/ae9301a8603f44a4d3c321db262aa61f?s=64",
+			src: "/favicon/gravatar-circle.png",
 			// 可选，指定主题 'light' | 'dark'
 			// theme: "light",
 			// 可选，图标大小
