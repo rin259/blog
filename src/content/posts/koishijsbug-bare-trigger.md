@@ -6,349 +6,341 @@ tags:
   - koishijs
   - 技术分析
 pinned: false
+comment: true
 ---
 
-我用 koishi 搭 QQ bot，QQ 号和 AstrBot、Luna 共享一个 NapCat（v4.18.9）实例，三个 bot 通过不同的 reverse WebSocket 接 NapCat：
+\# Koishi 群聊裸命令不响应的排查与解决
 
-* AstrBot：ws\://127.0.0.1:8997
-* Luna (NoneBot2)：ws\://127.0.0.1:6199
-* Koishi：ws\://127.0.0.1:6700
-  `music-voice` 插件的命令名是 `163`，私聊发 `163 wannacry` 能正常返回搜索结果，群聊发同样的消息却完全没反应。NapCat 日志清楚显示 koishi 收不到任何 `发送 ->` 输出，但群里的 `help` 又能正常响应，这个差异让我意识到是它根本没把群消息当指令
+我用 Koishi 搭 QQ bot，QQ 号和 AstrBot、Luna 共用一个 NapCat 4.18.9 实例。三个 bot 分别通过不同的 reverse WebSocket 连接 NapCat：
 
-## koishi 默认群里要 prefix 或 @bot 本体
+\- AstrBot：\`ws\://127.0.0.1:8997\`
 
-翻 koishi core（`@koishijs/core/lib/index.cjs:1275`）：
+\- Luna（NoneBot2）：\`ws\://127.0.0.1:6199\`
 
-```ts
+\- Koishi：\`ws\://127.0.0.1:6700\`
+
+Koishi 的 \`music-voice\` 插件命令是 \`163\`。
+
+私聊发送：
+
+\`\`\`text
+
+163 wannacry
+
+\`\`\`
+
+可以正常返回搜索结果。群聊发送同样内容却没有任何反应。NapCat 日志里没有 Koishi 对这条消息的 \`发送 ->\` 记录，但群里的 \`help\` 可以正常响应。
+
+这说明问题不在 NapCat 收消息，而在 Koishi 没把群消息当作普通命令处理。
+
+\## 群聊默认需要前缀或 @bot
+
+查看 \`@koishijs/core/lib/index.cjs:1275\` 的 \`attach\` hook，可以看到 Koishi 会先处理前缀：
+
+\`\`\`ts
+
 ctx.before("attach", (session) => {
+
 const { hasAt, appel } = session.stripped;
+
 if (!appel && hasAt) return;
+
 let content = session.stripped.content;
-for (const prefix of this._resolvePrefixes(session)) {
 
-          .tina-code-block .hljs-comment,
-          .tina-code-block .hljs-code,
-          .tina-code-block .hljs-formula { color: #6a737d; }
-          .tina-code-block .hljs-keyword,
-          .tina-code-block .hljs-doctag,
-          .tina-code-block .hljs-template-tag,
-          .tina-code-block .hljs-template-variable,
-          .tina-code-block .hljs-type,
-          .tina-code-block .hljs-variable.language_ { color: #d73a49; }
-          .tina-code-block .hljs-title,
-          .tina-code-block .hljs-title.class_,
-          .tina-code-block .hljs-title.class_.inherited__,
-          .tina-code-block .hljs-title.function_ { color: #6f42c1; }
-          .tina-code-block .hljs-attr,
-          .tina-code-block .hljs-attribute,
-          .tina-code-block .hljs-literal,
-          .tina-code-block .hljs-meta,
-          .tina-code-block .hljs-number,
-          .tina-code-block .hljs-operator,
-          .tina-code-block .hljs-selector-attr,
-          .tina-code-block .hljs-selector-class,
-          .tina-code-block .hljs-selector-id,
-          .tina-code-block .hljs-variable { color: #005cc5; }
-          .tina-code-block .hljs-regexp,
-          .tina-code-block .hljs-string,
-          .tina-code-block .hljs-meta_.hljs-string { color: #0366d6; }
-          .tina-code-block .hljs-built_in,
-          .tina-code-block .hljs-symbol { color: #e36209; }
-          .tina-code-block .hljs-name,
-          .tina-code-block .hljs-quote,
-          .tina-code-block .hljs-selector-tag,
-          .tina-code-block .hljs-selector-pseudo { color: #22863a; }
-          .tina-code-block .hljs-emphasis { font-style: italic; }
-          .tina-code-block .hljs-strong { font-weight: bold; }
-          .tina-code-block .hljs-section { font-weight: bold; color: #005cc5; }
-          .tina-code-block .hljs-bullet { color: #735c0f; }
-          .tina-code-block .hljs-addition { background: #f0fff4; color: #22863a; }
-          .tina-code-block .hljs-deletion { background: #ffeef0; color: #b31d28; }
-          .slate-code_line > span:last-child {margin-right: 1rem;}
-        if (!content.startsWith(prefix)) continue;
+for (const prefix of this.\_resolvePrefixes(session)) {
 
+```
+if (!content.startsWith(prefix)) continue;
 
 session.stripped.prefix = prefix;
 
-
 content = content.slice(prefix.length);
 
-
 break;
-
-Plain Text
-
+```
 
 }
-...
+
 });
-```
 
-紧接着是 `inferCommand`（`index.cjs:1446`）：
+\`\`\`
 
-```ts
+接下来是 \`inferCommand()\`，位于 \`index.cjs:1446\`：
+
+\`\`\`ts
+
 inferCommand(argv) {
+
 if (!argv) return;
+
 if (argv.command) return argv.command;
-...
-const isStrict = this.config.prefixMode === "strict" || !isDirect && !stripped.appel;
-if (argv.root && stripped.prefix === null && isStrict) return;  // ← 群里裸消息栽在这
-...
-}
+
+// ...
+
+const isStrict =
+
+```
+this.config.prefixMode === "strict" ||
+
+(!isDirect && !stripped.appel);
 ```
 
-逻辑链是这样的：
+if (argv.root && stripped.prefix === null && isStrict) return;
 
-| 场景                                                                                                                                                                                                             | `isDirect` | `stripped.prefix` | `stripped.appel` | `inferCommand` 行为                             |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------- | ---------------- | --------------------------------------------- |
-| 私聊裸 `163`                                                                                                                                                                                                      | `true`     | `null`            | `false`          | 直接走 token 匹配 → ✅                              |
-| 群聊裸 `163`                                                                                                                                                                                                      | `false`    | `null`            | `false`          | `isStrict=true && prefix===null` → return → ❌ |
-| 群聊 `/163`                                                                                                                                                                                                      | `false`    | `'/'`             | `false`          | prefix 已经被 attach 剥过 → ✅                      |
-| 群聊 `@bot 163`                                                                                                                                                                                                  | `false`    | `null`            | `true`           | appel=true 短路掉 isStrict → ✅                   |
-| `help` 在群里能用，是因为 plugin-help 用了 `cmd.shortcut('help', { fuzzy: true })`，注册到了 koishi 的 matcher 池里，**绕开**了 `inferCommand` 的 prefix 判定 `music-voice` 这种用 `ctx.command('163 ...')` 正常注册的命令，必须走 `inferCommand`，于是踩坑 |            |                   |                  |                                               |
-| 我先把 `koishi.yml` 顶层的 `prefix: []` 改成 `prefix: ''` / `prefix: ['']`，想给所有消息加个"空前缀"——配置加载确实生效了（`commander.config.prefix` = `[""]`），但 `stripped.prefix` 依然是 `null`。                                                |            |                   |                  |                                               |
+// ...
 
-## attach hook 在多 ctx 下被 filter 掉了
+}
 
-koishi 用的是 [cordis](https://github.com/cordiverse/cordis) 作为 hook 框架，每个 plugin 都活在独立 ctx scope 里。`Commander` 是在 koishi app 启动时（`provide("$commander", new Commander(this, ...))`）注册 hook，hook 的 ctx 落在 root scope 上
-但 `session`（每个 message event 的 `thisArg`）是从 `adapter-onebot` 来的，session 的 ctx 落在 adapter 的 ctx scope 下。
-cordis 的 `Lifecycle.filterHooks`（`@cordisjs/core/lib/index.cjs:500`）：
+\`\`\`
 
-```ts
+群聊和私聊的差异如下：
+
+\| 场景 | \`isDirect\` | \`stripped.prefix\` | \`stripped.appel\` | 结果 |
+
+\| --- | --- | --- | --- | --- |
+
+\| 私聊裸 \`163\` | \`true\` | \`null\` | \`false\` | 能继续匹配命令 |
+
+\| 群聊裸 \`163\` | \`false\` | \`null\` | \`false\` | \`inferCommand()\` 直接返回 |
+
+\| 群聊 \`/163\` | \`false\` | \`'/'\` | \`false\` | 前缀已被剥离，可以匹配 |
+
+\| 群聊 \`@bot 163\` | \`false\` | \`null\` | \`true\` | 不触发严格前缀判断，可以匹配 |
+
+群里的 \`help\` 能工作，是因为 \`plugin-help\` 使用了：
+
+\`\`\`ts
+
+cmd.shortcut('help', { fuzzy: true })
+
+\`\`\`
+
+它注册到 Koishi 的 matcher 池，不依赖 \`inferCommand()\` 的前缀判断。\`music-voice\` 使用的是普通的：
+
+\`\`\`ts
+
+ctx.command('163 ...')
+
+\`\`\`
+
+所以必须经过 \`inferCommand()\`，群聊裸命令会在这里被拦下。
+
+\## \`prefix: \['']\` 为什么没有生效
+
+我先尝试在 \`koishi.yml\` 顶层设置空前缀：
+
+\`\`\`yaml
+
+prefix: \['']
+
+\`\`\`
+
+配置加载后，\`commander.config.prefix\` 的确变成了 \`\['']\`，但 \`session.stripped.prefix\` 仍然是 \`null\`。
+
+继续排查后，我发现 Commander 注册的 \`attach\` hook 没有进入群消息路径。
+
+Koishi 使用 Cordis 管理 hook。每个插件运行在自己的 context scope 中。Commander 在应用启动时通过 root scope 注册 hook，而 adapter-onebot 创建的 session 带有 adapter 的 context scope。
+
+Cordis 的 \`Lifecycle.filterHooks()\` 位于 \`@cordisjs/core/lib/index.cjs:500\`：
+
+\`\`\`ts
+
 filterHooks(hooks, thisArg) {
+
 thisArg = getTraceable(this.ctx, thisArg);
+
 return hooks.slice().filter((hook) => {
 
-          .tina-code-block .hljs-comment,
-          .tina-code-block .hljs-code,
-          .tina-code-block .hljs-formula { color: #6a737d; }
-          .tina-code-block .hljs-keyword,
-          .tina-code-block .hljs-doctag,
-          .tina-code-block .hljs-template-tag,
-          .tina-code-block .hljs-template-variable,
-          .tina-code-block .hljs-type,
-          .tina-code-block .hljs-variable.language_ { color: #d73a49; }
-          .tina-code-block .hljs-title,
-          .tina-code-block .hljs-title.class_,
-          .tina-code-block .hljs-title.class_.inherited__,
-          .tina-code-block .hljs-title.function_ { color: #6f42c1; }
-          .tina-code-block .hljs-attr,
-          .tina-code-block .hljs-attribute,
-          .tina-code-block .hljs-literal,
-          .tina-code-block .hljs-meta,
-          .tina-code-block .hljs-number,
-          .tina-code-block .hljs-operator,
-          .tina-code-block .hljs-selector-attr,
-          .tina-code-block .hljs-selector-class,
-          .tina-code-block .hljs-selector-id,
-          .tina-code-block .hljs-variable { color: #005cc5; }
-          .tina-code-block .hljs-regexp,
-          .tina-code-block .hljs-string,
-          .tina-code-block .hljs-meta_.hljs-string { color: #0366d6; }
-          .tina-code-block .hljs-built_in,
-          .tina-code-block .hljs-symbol { color: #e36209; }
-          .tina-code-block .hljs-name,
-          .tina-code-block .hljs-quote,
-          .tina-code-block .hljs-selector-tag,
-          .tina-code-block .hljs-selector-pseudo { color: #22863a; }
-          .tina-code-block .hljs-emphasis { font-style: italic; }
-          .tina-code-block .hljs-strong { font-weight: bold; }
-          .tina-code-block .hljs-section { font-weight: bold; color: #005cc5; }
-          .tina-code-block .hljs-bullet { color: #735c0f; }
-          .tina-code-block .hljs-addition { background: #f0fff4; color: #22863a; }
-          .tina-code-block .hljs-deletion { background: #ffeef0; color: #b31d28; }
-          .slate-code_line > span:last-child {margin-right: 1rem;}
-        const filter = thisArg?.\[Context.filter];
-
+```
+const filter = thisArg?.\[Context.filter];
 
 return hook.global || !filter || filter.call(thisArg, hook.ctx);
-
-Plain Text
-
+```
 
 });
+
 }
-```
 
-当 `thisArg`（session）带 `Context.filter` 时，hook.ctx **必须** 落在 session ctx 的可达 scope 里才会执行。我直接 patch `@koishijs/core/lib/index.cjs` 在 `Commander` 的 attach hook 里塞 `console.log`，启动 koishi、群聊发消息——**日志一条都没打出来**。但我自己写的 plugin 注册的 `ctx.before('attach', ...)` 在同一条消息上能触发
-也就是说：**Commander 的 attach hook 在群消息路径上从来没被调用过**。这就把 `stripped.prefix` 一直留在初始的 `null`，后续所有逻辑都被短路
-koishi 1.0 时代 core 自己直接 root 注册 hook 应该没问题，2.x/4.x 把 ctx 隔离做细之后，这个 hook 的注册 scope 看起来需要被显式 patch 上去。社区里搜到的所有"群消息不响应"issue，最后都是用户加 prefix 或 @bot 凑合过去，没人去诊断 `filterHooks` 的细节
+\`\`\`
 
-## 解决方法是写一个本地插件做一个类似裸触发器的东西 dispatch 掉它
+当 session 带有 \`Context.filter\` 时，hook 的 context 必须在 session context 的可达范围内，hook 才会执行。
 
-绕开 cordis 的 filter 链最干净的做法：在 plugin 自己的 ctx 里直接接管 message 分发，不依赖 koishi core 的 attach/inferCommand 流程
-**`/opt/koishi-app/plugins/koishi-plugin-bare-trigger/package.json`**：
+我直接在 \`@koishijs/core/lib/index.cjs\` 的 Commander \`attach\` hook 中加入 \`console.log()\`。启动 Koishi 后向群聊发消息，日志没有任何输出。但我自己写的插件通过：
 
-```json
+\`\`\`ts
+
+ctx.before('attach', ...)
+
+\`\`\`
+
+注册的 hook 可以在同一条消息上触发。
+
+也就是说，Commander 的 \`attach\` hook 在这条群消息路径上没有执行。\`stripped.prefix\` 保持初始值 \`null\`，随后 \`inferCommand()\` 按严格群聊规则退出。
+
+\## 用本地插件处理群聊裸命令
+
+我没有继续修改 Koishi core，而是写了一个本地插件。
+
+插件在自己的 context 中监听 \`message\`。它只处理以下消息：
+
+\- 群消息
+
+\- 没有前缀
+
+\- 没有 \`@bot\`
+
+\- 第一个 token 是已注册命令
+
+插件将 \`session.stripped.prefix\` 临时设为 \`''\`，然后构造 argv 并调用 \`inferCommand()\` 与 \`session.execute()\`。私聊、有前缀的命令和 \`@bot\` 命令仍由 Koishi 原来的流程处理。
+
+\`/opt/koishi-app/plugins/koishi-plugin-bare-trigger/package.json\`：
+
+\`\`\`json
+
 {
+
 "name": "koishi-plugin-bare-trigger",
+
 "version": "0.0.1",
+
 "main": "index.js",
+
 "koishi": {
 
-          .tina-code-block .hljs-comment,
-          .tina-code-block .hljs-code,
-          .tina-code-block .hljs-formula { color: #6a737d; }
-          .tina-code-block .hljs-keyword,
-          .tina-code-block .hljs-doctag,
-          .tina-code-block .hljs-template-tag,
-          .tina-code-block .hljs-template-variable,
-          .tina-code-block .hljs-type,
-          .tina-code-block .hljs-variable.language_ { color: #d73a49; }
-          .tina-code-block .hljs-title,
-          .tina-code-block .hljs-title.class_,
-          .tina-code-block .hljs-title.class_.inherited__,
-          .tina-code-block .hljs-title.function_ { color: #6f42c1; }
-          .tina-code-block .hljs-attr,
-          .tina-code-block .hljs-attribute,
-          .tina-code-block .hljs-literal,
-          .tina-code-block .hljs-meta,
-          .tina-code-block .hljs-number,
-          .tina-code-block .hljs-operator,
-          .tina-code-block .hljs-selector-attr,
-          .tina-code-block .hljs-selector-class,
-          .tina-code-block .hljs-selector-id,
-          .tina-code-block .hljs-variable { color: #005cc5; }
-          .tina-code-block .hljs-regexp,
-          .tina-code-block .hljs-string,
-          .tina-code-block .hljs-meta_.hljs-string { color: #0366d6; }
-          .tina-code-block .hljs-built_in,
-          .tina-code-block .hljs-symbol { color: #e36209; }
-          .tina-code-block .hljs-name,
-          .tina-code-block .hljs-quote,
-          .tina-code-block .hljs-selector-tag,
-          .tina-code-block .hljs-selector-pseudo { color: #22863a; }
-          .tina-code-block .hljs-emphasis { font-style: italic; }
-          .tina-code-block .hljs-strong { font-weight: bold; }
-          .tina-code-block .hljs-section { font-weight: bold; color: #005cc5; }
-          .tina-code-block .hljs-bullet { color: #735c0f; }
-          .tina-code-block .hljs-addition { background: #f0fff4; color: #22863a; }
-          .tina-code-block .hljs-deletion { background: #ffeef0; color: #b31d28; }
-          .slate-code_line > span:last-child {margin-right: 1rem;}
-        "description": { "zh": "让群消息像私聊一样裸触发 koishi 已注册命令" }
+```
+"description": {
 
-Plain Text
+  "zh": "让群消息像私聊一样裸触发 Koishi 已注册命令"
 
-
-}
 }
 ```
 
-**`/opt/koishi-app/plugins/koishi-plugin-bare-trigger/index.js`**：
+}
 
-```js
+}
+
+\`\`\`
+
+\`/opt/koishi-app/plugins/koishi-plugin-bare-trigger/index.js\`：
+
+\`\`\`js
+
 const k = require('@koishijs/core')
+
 module.exports = {
+
 apply(ctx) {
 
-          .tina-code-block .hljs-comment,
-          .tina-code-block .hljs-code,
-          .tina-code-block .hljs-formula { color: #6a737d; }
-          .tina-code-block .hljs-keyword,
-          .tina-code-block .hljs-doctag,
-          .tina-code-block .hljs-template-tag,
-          .tina-code-block .hljs-template-variable,
-          .tina-code-block .hljs-type,
-          .tina-code-block .hljs-variable.language_ { color: #d73a49; }
-          .tina-code-block .hljs-title,
-          .tina-code-block .hljs-title.class_,
-          .tina-code-block .hljs-title.class_.inherited__,
-          .tina-code-block .hljs-title.function_ { color: #6f42c1; }
-          .tina-code-block .hljs-attr,
-          .tina-code-block .hljs-attribute,
-          .tina-code-block .hljs-literal,
-          .tina-code-block .hljs-meta,
-          .tina-code-block .hljs-number,
-          .tina-code-block .hljs-operator,
-          .tina-code-block .hljs-selector-attr,
-          .tina-code-block .hljs-selector-class,
-          .tina-code-block .hljs-selector-id,
-          .tina-code-block .hljs-variable { color: #005cc5; }
-          .tina-code-block .hljs-regexp,
-          .tina-code-block .hljs-string,
-          .tina-code-block .hljs-meta_.hljs-string { color: #0366d6; }
-          .tina-code-block .hljs-built_in,
-          .tina-code-block .hljs-symbol { color: #e36209; }
-          .tina-code-block .hljs-name,
-          .tina-code-block .hljs-quote,
-          .tina-code-block .hljs-selector-tag,
-          .tina-code-block .hljs-selector-pseudo { color: #22863a; }
-          .tina-code-block .hljs-emphasis { font-style: italic; }
-          .tina-code-block .hljs-strong { font-weight: bold; }
-          .tina-code-block .hljs-section { font-weight: bold; color: #005cc5; }
-          .tina-code-block .hljs-bullet { color: #735c0f; }
-          .tina-code-block .hljs-addition { background: #f0fff4; color: #22863a; }
-          .tina-code-block .hljs-deletion { background: #ffeef0; color: #b31d28; }
-          .slate-code_line > span:last-child {margin-right: 1rem;}
-        ctx.on('message', async (session) => {
+```
+ctx.on('message', async (session) => {
 
+  // 私聊本身可以裸触发，不需要由插件处理。
 
-  //私聊不需要这个插件（私聊本身就能裸触发）
   if (session.stripped?.isDirect) return
-  //已经有 prefix 或 @bot，走 koishi 自带路径
+
+  // 已带前缀或已 @bot 时，继续使用 Koishi 原来的命令流程。
+
   if (session.stripped?.prefix !== null) return
+
   if (session.stripped?.hasAt || session.stripped?.appel) return
+
   let content = session.stripped?.content
+
   if (!content) return
-  if (content.startsWith('/')) content = content.slice(1)
+
+  if (content.startsWith('/')) {
+
+    content = content.slice(1)
+
+  }
+
   const at = content.match(/^@\S+\s+/)
-  if (at) content = content.slice(at\[0].length)
+
+  if (at) {
+
+    content = content.slice(at\[0].length)
+
+  }
+
   const first = content.split(/\s+/, 1)\[0]
+
   if (!first) return
+
   if (!ctx.app.$commander.get(first, session)) return
+
   try {
-    //关键：把 prefix 临时设为空字符串，
-    //否则 inferCommand 里的 "stripped.prefix === null && isStrict" 会 return
+
+    // 避免 inferCommand() 因群聊裸消息的严格前缀判断而退出。
+
     session.stripped.prefix = ''
+
     const argv = k.Argv.parse(content)
+
     argv.session = session
+
     argv.root = true
+
     ctx.app.$commander.inferCommand(argv)
+
     await session.execute(argv)
+
   } catch {}
+
 })
-Plain Text
-
-
-}
-}
 ```
 
-**symlink + koishi.yml 注册**：
+},
 
-```bash
-ln -s ../plugins/koishi-plugin-bare-trigger /opt/koishi-app/node_modules/koishi-plugin-bare-trigger
-```
+}
 
-`koishi.yml` 里在 `adapter-onebot` 后面加一行：
+\`\`\`
 
-```yaml
+创建软链接：
+
+\`\`\`bash
+
+ln -s ../plugins/koishi-plugin-bare-trigger /opt/koishi-app/node\_modules/koishi-plugin-bare-trigger
+
+\`\`\`
+
+在 \`koishi.yml\` 中，把插件放在 \`adapter-onebot\` 后面：
+
+\`\`\`yaml
+
 adapter-onebot:8fxdaw:
-selfId: '32******38'
+
+selfId: '32\*\*\*\*\*\*38'
+
 protocol: ws
-endpoint: ws://127.0.0.1:6700
-token: '***'
+
+endpoint: ws\://127.0.0.1:6700
+
+token: '\*\*\*'
+
 bare-trigger:bare01: {}
-```
 
-重启 koishi：
+\`\`\`
 
-```bash
+重启 Koishi：
+
+\`\`\`bash
+
 systemctl restart koishi-app.service
-```
 
-## 效果
+\`\`\`
 
-napcat 日志里看到：
+NapCat 日志随后可以看到群聊命令被 Koishi 响应：
 
-```
-08:04:45 [info] OwO | 接收 <- 群聊 [...rin's lab...] [Rin] 163 1
-08:04:46 [info] OwO | 发送 -> 群聊 [...rin's lab...] [OwO(32******38)] [图片] 退出选择请发送 [0, 不听了] 中的任意内容 ...
-```
+\`\`\`text
 
-群消息裸触发 100% 跟私聊一致，私聊行为不变，已有 prefix / @bot 的命令也不冲突（plugin 在第一步 return 掉了）。
+08:04:45 \[info] OwO | 接收 \<- 群聊 \[...rin's lab...] \[Rin] 163 1
 
-## 后话
+08:04:46 \[info] OwO | 发送 -> 群聊 \[...rin's lab...] \[OwO(32\*\*\*\*\*\*38)] \[图片] 退出选择请发送 \[0, 不听了] 中的任意内容 ...
 
-回过头看，`prefix: ['']` 这个修复其实**方向是对的**，但被 koishi core attach hook 没触发的事实掩盖了——配置生效了但路径走不到。如果哪天 koishi 修了 attach hook 的 scope 问题，这条 `prefix: ['']` 也能独立工作。但裸触发这个用例，最好的实现还是 plugin：它更显式 更可控 不依赖 koishi 内部的 hook 拓扑
-如果你也遇到群里自定义命令不响应的问题，可以照上面三步走 (o´・ω・)
+\`\`\`
+
+现在群聊裸触发和私聊行为一致。私聊不受影响，已有前缀和 \`@bot\` 的命令也不会冲突，因为插件会先跳过这些消息。
+
+\`prefix: \['']\` 的方向本身没有问题。配置虽然生效了，但 Commander 的 \`attach\` hook 没有进入该群消息路径，所以空前缀没有机会写入 \`session.stripped.prefix\`。如果 Koishi 后续修复这个 hook 的 scope 问题，空前缀配置可能可以单独工作。
+
+对这个裸触发场景，本地插件更直观：只处理需要处理的群消息，行为也不依赖 Koishi 内部 hook 的可达关系。
