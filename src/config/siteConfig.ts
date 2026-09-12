@@ -67,7 +67,7 @@ export const siteConfig: SiteConfig = {
 		logo: {
 			type: "url",
 			value:
-				"https://weavatar.com/avatar/ae9301a8603f44a4d3c321db262aa61f?s=200&d=identicon",
+				"https://www.gravatar.com/avatar/ae9301a8603f44a4d3c321db262aa61f?s=512",
 			alt: "rin",
 		},
 		// 导航栏标题

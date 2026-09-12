@@ -96,7 +96,6 @@ const managerConfigStr = JSON.stringify({
 
     // ── Audio element (persistent, attached to body) ────────
     var audio = document.createElement('audio');
-    audio.crossOrigin = 'anonymous';
     audio.style.display = 'none';
     document.body.appendChild(audio);
 
@@ -207,25 +206,39 @@ const managerConfigStr = JSON.stringify({
         var track = state.playlist[index];
         var ver = ++loadVersion;
 
-        audio.src = track.url;
-
-        loadLyrics(track);
-
-        emit('fm:track', { index: index, track: track, autoPlay: !!autoPlay });
-
-        if (autoPlay) {
-            audio.play().then(function () {
-                if (ver !== loadVersion) return; // stale, discard
-                state.isPlaying = true;
-                emit('fm:play-state', { isPlaying: true });
-            }).catch(function (e) {
-                if (ver !== loadVersion) return; // stale, discard
-                if (e.name === 'AbortError') return; // interrupted by new load
-                console.warn('Autoplay blocked:', e);
+        var url = track.url;
+        if (/[?&]type=url[&=]/.test(url)) {
+            fetch(url).then(function(res) { return res.url; }).then(function(resolvedUrl) {
+                audio.src = resolvedUrl;
+                afterLoad();
+            }).catch(function() {
+                audio.src = url;
+                afterLoad();
             });
         } else {
-            state.isPlaying = false;
-            emit('fm:play-state', { isPlaying: false });
+            audio.src = url;
+            afterLoad();
+        }
+
+        function afterLoad() {
+            loadLyrics(track);
+
+            emit('fm:track', { index: index, track: track, autoPlay: !!autoPlay });
+
+            if (autoPlay) {
+                audio.play().then(function () {
+                    if (ver !== loadVersion) return; // stale, discard
+                    state.isPlaying = true;
+                    emit('fm:play-state', { isPlaying: true });
+                }).catch(function (e) {
+                    if (ver !== loadVersion) return; // stale, discard
+                    if (e.name === 'AbortError') return; // interrupted by new load
+                    console.warn('Autoplay blocked:', e);
+                });
+            } else {
+                state.isPlaying = false;
+                emit('fm:play-state', { isPlaying: false });
+            }
         }
     }
 
