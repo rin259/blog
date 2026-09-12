@@ -31,16 +31,36 @@ jobs:
           version: 9.14.4
           run_install: false
 
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Cache Tina admin
+        id: cache-tina
+        uses: actions/cache@v4
+        with:
+          path: public/admin
+          key: tina-admin-${{ hashFiles('tina/config.ts', 'tina/tina-lock.json') }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm run build
+      - name: Tina build (if needed)
+        if: steps.cache-tina.outputs.cache-hit != 'true'
+        run: npx tinacms build
         env:
-          NODE_ENV: production
           TINA_CLIENT_ID: ${{ secrets.TINA_CLIENT_ID }}
           TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
           GITHUB_BRANCH: main
+
+      - name: Build
+        run: pnpm run build:ci
+        env:
+          NODE_ENV: production
 
       - name: Create .nojekyll
         run: touch dist/.nojekyll

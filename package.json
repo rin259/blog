@@ -11,6 +11,7 @@
     "start": "astro dev",
     "check": "astro check",
     "build": "tinacms build && node scripts/generate-icons.js && npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
+    "build:ci": "node scripts/generate-icons.js && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "type-check": "tsc --noEmit --isolatedDeclarations",
