@@ -144,9 +144,13 @@ const managerConfigStr = JSON.stringify({
                     .replace(':r', Math.random());
                 if (m.auth) fetchUrl += '&auth=' + m.auth;
 
-                var res = await fetch(fetchUrl);
+                var res = await fetch(fetchUrl, { cache: 'no-store' });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                var data = await res.json();
+                var text = await res.text();
+                // 部分 Meting API 會在 JSON 前輸出 PHP 警告/通知，先裁掉前導非 JSON 內容
+                var jsonStart = text.search(/[[{]/);
+                if (jsonStart > 0) text = text.slice(jsonStart);
+                var data = JSON.parse(text);
 
                 if (Array.isArray(data) && data.length > 0) {
                     state.playlist = data.map(function (item) {
@@ -208,7 +212,7 @@ const managerConfigStr = JSON.stringify({
 
         var url = track.url;
         if (/[?&]type=url[&=]/.test(url)) {
-            fetch(url).then(function(res) { return res.url; }).then(function(resolvedUrl) {
+            fetch(url, { cache: 'no-store' }).then(function(res) { return res.url; }).then(function(resolvedUrl) {
                 audio.src = resolvedUrl;
                 afterLoad();
             }).catch(function() {
